@@ -1,0 +1,21 @@
+import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.sondare.app',
+  appName: 'Sondare',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#000000',
+      androidSplashResourceName: 'splash',
+      iosSplashResourceName: 'Default',
+      showSpinner: false,
+    },
+  },
+};
+
+export default config;
