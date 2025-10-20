@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.sondare.app',
   appName: 'Sondare',
   webDir: 'dist',
+  ios: {
+    minVersion: '13.0'
+  },
   server: {
     androidScheme: 'https'
   },
