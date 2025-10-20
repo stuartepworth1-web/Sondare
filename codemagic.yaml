@@ -25,11 +25,10 @@ workflows:
       - name: Install Capacitor
         script: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios
-      - name: Add iOS platform
+      - name: Add iOS platform and configure deployment target
         script: |
-          npx cap add ios
-      - name: Set iOS deployment target
-        script: |
+          npx cap add ios --no-sync
+          echo "platform :ios, '13.0'" | cat - ios/App/Podfile > temp && mv temp ios/App/Podfile
           sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Update dependencies and copy web assets to native project
         script: |
