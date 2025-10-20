@@ -27,12 +27,15 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/ios
       - name: Add iOS platform and configure deployment target
         script: |
-          npx cap add ios --no-sync
-          echo "platform :ios, '13.0'" | cat - ios/App/Podfile > temp && mv temp ios/App/Podfile
-          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g" ios/App/App.xcodeproj/project.pbxproj
-      - name: Update dependencies and copy web assets to native project
+          npx cap add ios || true
+          if [ -f ios/App/Podfile ]; then
+            sed -i '' "1s/^/platform :ios, '13.0'\n/" ios/App/Podfile
+            sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g" ios/App/App.xcodeproj/project.pbxproj
+            cd ios/App && pod install
+          fi
+      - name: Copy web assets to native project
         script: |
-          npx cap sync ios
+          npx cap copy ios
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
