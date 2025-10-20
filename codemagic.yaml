@@ -28,6 +28,9 @@ workflows:
       - name: Add iOS platform
         script: |
           npx cap add ios
+      - name: Set iOS deployment target
+        script: |
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Update dependencies and copy web assets to native project
         script: |
           npx cap sync ios
