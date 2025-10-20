@@ -25,6 +25,9 @@ workflows:
       - name: Install Capacitor
         script: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios
+      - name: Add iOS platform
+        script: |
+          npx cap add ios
       - name: Update dependencies and copy web assets to native project
         script: |
           npx cap sync ios
@@ -82,6 +85,9 @@ workflows:
       - name: Install Capacitor
         script: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
+      - name: Add Android platform
+        script: |
+          npx cap add android
       - name: Update dependencies and copy web assets to native project
         script: |
           npx cap sync android
