@@ -29,26 +29,19 @@ workflows:
         script: |
           npx cap add ios || true
           if [ -f ios/App/Podfile ]; then
-            # Rewrite Podfile with correct iOS version
-            cat > ios/App/Podfile << 'EOF'
-platform :ios, '14.0'
-use_frameworks!
-
-# workaround to avoid Xcode caching of Pods that requires
-# Product -> Clean Build Folder after new Cordova plugins installed
-# Requires CocoaPods 1.6 or newer
-install! 'cocoapods', :disable_input_output_paths => true
-
-def capacitor_pods
-  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
-  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-end
-
-target 'App' do
-  capacitor_pods
-  # Add your Pods here
-end
-EOF
+            echo "platform :ios, '14.0'" > ios/App/Podfile
+            echo "use_frameworks!" >> ios/App/Podfile
+            echo "" >> ios/App/Podfile
+            echo "install! 'cocoapods', :disable_input_output_paths => true" >> ios/App/Podfile
+            echo "" >> ios/App/Podfile
+            echo "def capacitor_pods" >> ios/App/Podfile
+            echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+            echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+            echo "end" >> ios/App/Podfile
+            echo "" >> ios/App/Podfile
+            echo "target 'App' do" >> ios/App/Podfile
+            echo "  capacitor_pods" >> ios/App/Podfile
+            echo "end" >> ios/App/Podfile
             sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
             cd ios/App && pod install
           fi
