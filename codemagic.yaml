@@ -119,9 +119,10 @@ workflows:
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
     publishing:
-      email: stuart@sondare.me
+      email:
+      - stuart@sondare.me
         recipients:
-          - your-email@example.com
+          - stuart@sondare.me
         notify:
           success: true
           failure: true
