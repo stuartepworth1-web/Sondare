@@ -67,7 +67,7 @@ workflows:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
-      email: stuart@sondare.me
+      email:
         recipients:
           - stuart@sondare.me
         notify:
