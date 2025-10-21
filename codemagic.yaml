@@ -67,7 +67,7 @@ workflows:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
-      email:
+      email: stuart@sondare.me
         recipients:
           - stuart@sondare.me
         notify:
@@ -119,7 +119,7 @@ workflows:
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
     publishing:
-      email:
+      email: stuart@sondare.me
         recipients:
           - your-email@example.com
         notify:
