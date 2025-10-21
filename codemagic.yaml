@@ -120,7 +120,6 @@ workflows:
       - android/app/build/outputs/**/*.apk
     publishing:
       email:
-      - stuart@sondare.me
         recipients:
           - stuart@sondare.me
         notify:
