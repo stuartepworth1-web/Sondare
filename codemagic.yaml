@@ -54,8 +54,9 @@ workflows:
       - name: Increment build number
         script: |
           cd ios/App
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
-          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+          NEW_BUILD_NUMBER=$(($(date +%s) / 60))
+          echo "Setting build number to: $NEW_BUILD_NUMBER (timestamp-based)"
+          agvtool new-version -all $NEW_BUILD_NUMBER
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
