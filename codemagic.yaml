@@ -14,7 +14,7 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.sondare.app"
         APP_STORE_APPLE_ID: 6754073121
-      node: 18
+      node: 20
     scripts:
       - name: Install dependencies
         script: |
@@ -92,7 +92,7 @@ workflows:
         - google_play
       vars:
         PACKAGE_NAME: "com.sondare.app"
-      node: 18
+      node: 20
     scripts:
       - name: Install dependencies
         script: |
