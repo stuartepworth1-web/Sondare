@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 interface HomeProps {
   onShowHowTo: () => void;
   onNavigate: (tab: 'home' | 'builder' | 'design' | 'projects') => void;
+  onShowUpgrade: () => void;
 }
 
-export function Home({ onShowHowTo, onNavigate }: HomeProps) {
+export function Home({ onShowHowTo, onNavigate, onShowUpgrade }: HomeProps) {
   const { profile, signOut } = useAuth();
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
@@ -14,7 +15,7 @@ export function Home({ onShowHowTo, onNavigate }: HomeProps) {
   const tierInfo = {
     free: { name: 'Free Plan', limit: 3, color: 'text-gray-400' },
     pro: { name: 'Pro Plan', limit: 50, color: 'text-orange-500' },
-    teams: { name: 'Teams Plan', limit: 200, color: 'text-orange-600' },
+    entrepreneur: { name: 'Entrepreneur Plan', limit: 200, color: 'text-orange-600' },
   };
 
   const currentTier = tierInfo[profile?.subscription_tier || 'free'];
@@ -70,7 +71,7 @@ export function Home({ onShowHowTo, onNavigate }: HomeProps) {
           </div>
         </button>
 
-        <button className="w-full glass-card p-4 flex items-center gap-3 hover:bg-white/10 transition-colors active:scale-[0.98]">
+        <button onClick={onShowUpgrade} className="w-full glass-card p-4 flex items-center gap-3 hover:bg-white/10 transition-colors active:scale-[0.98]">
           <div className="bg-blue-500/20 p-2.5 sm:p-3 rounded-xl flex-shrink-0">
             <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
           </div>

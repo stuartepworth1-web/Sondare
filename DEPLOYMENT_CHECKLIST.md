@@ -1,240 +1,422 @@
-# Sondare Deployment Checklist
+# Deployment Checklist for Sondare
 
-Follow this checklist to deploy Sondare to the App Store using Codemagic.
+## ⚠️ CRITICAL: Update Before First Build
 
-## Pre-Deployment (Complete These First)
+### 🎯 Step 1: Get Your App Store ID
 
-### 1. Verify Database Setup
-- [ ] Supabase database is running
-- [ ] All tables created (profiles, projects, generations, deployments)
-- [ ] Row Level Security (RLS) policies are active
-- [ ] Test user signup and login works
-- [ ] Test project creation works
+**You must complete this BEFORE building in Codemagic:**
 
-### 2. Configure Environment Variables
-- [ ] `.env` file exists with correct values
-- [ ] `VITE_SUPABASE_URL` is set
-- [ ] `VITE_SUPABASE_ANON_KEY` is set
-- [ ] Environment variables are added to Codemagic dashboard
+1. Log in to **App Store Connect**: https://appstoreconnect.apple.com
+2. Click **"My Apps"** → **"+"** icon → **"New App"**
+3. Fill in the details:
+   - **Platform**: iOS
+   - **Name**: Sondare
+   - **Primary Language**: English (U.S.)
+   - **Bundle ID**: Select `com.sondare.app` (must already be registered with your Apple Developer account)
+   - **SKU**: Enter a unique identifier (e.g., `sondare-001`)
+4. Click **Create**
+5. In your new app, go to **App Information**
+6. Find **"Apple ID"** (it's a number like `6736521843`)
+7. **Copy this number** - you'll need it next
 
-### 3. Test Edge Function
-- [ ] Edge function `generate-app` is deployed
-- [ ] Test AI generation from Builder tab
-- [ ] Verify credit deduction works
-- [ ] Check project is created in database
+### 🔧 Step 2: Update Codemagic Configuration
 
-### 4. App Content Updates
-- [ ] Update app name in `capacitor.config.ts` if needed
-- [ ] Update app ID in `capacitor.config.ts` (`com.sondare.app` or your preferred)
-- [ ] Add app icon at `public/icon.png` (1024x1024px)
-- [ ] Add splash screen images
+**File**: `codemagic.yaml`
+**Line 16**: Replace the placeholder App Store ID
 
-### 5. Legal Requirements
-- [ ] Create Privacy Policy
-- [ ] Create Terms of Service
-- [ ] Add support email (currently placeholder)
-- [ ] Update README with real support contact
-
-## Capacitor Setup
-
-### 6. Install Capacitor
-```bash
-npm install @capacitor/core @capacitor/cli
-npm install @capacitor/ios @capacitor/android
+**Find this line:**
+```yaml
+APP_STORE_APPLE_ID: 1234567890
 ```
 
-### 7. Initialize Platforms
-```bash
-# Build web app first
-npm run build
-
-# Add iOS
-npx cap add ios
-
-# Add Android
-npx cap add android
-
-# Sync built files
-npx cap sync
+**Replace with your actual App Store ID:**
+```yaml
+APP_STORE_APPLE_ID: 6736521843  # ← Your real ID from App Store Connect
 ```
 
-### 8. Test Locally (Optional but Recommended)
-```bash
-# Open in Xcode
-npx cap open ios
+### 📧 Step 3: Update Email Notifications
 
-# Open in Android Studio
-npx cap open android
+**File**: `codemagic.yaml`
+**Lines 79 and 112**: Replace with your actual email
+
+**Find:**
+```yaml
+recipients:
+  - your-email@example.com
 ```
 
-## Codemagic Configuration
+**Replace with:**
+```yaml
+recipients:
+  - your-actual-email@domain.com
+```
 
-### 9. Connect Repository
-- [ ] Push code to GitHub/GitLab/Bitbucket
-- [ ] Connect repository to Codemagic
-- [ ] Grant Codemagic access to repo
+---
 
-### 10. Configure Build Settings
-- [ ] Select repository and branch
-- [ ] Set build trigger (manual or automatic)
-- [ ] Configure build commands:
-  ```yaml
-  scripts:
-    - npm install
-    - npm run build
-    - npx cap sync
-  ```
+## 📋 Complete Pre-Build Checklist
 
-### 11. Add Environment Variables in Codemagic
-- [ ] `VITE_SUPABASE_URL`
-- [ ] `VITE_SUPABASE_ANON_KEY`
+### ✅ Codemagic Setup
+- [ ] **App Store Connect Integration** configured in Codemagic:
+  - Go to: Codemagic → Teams → Integrations → App Store Connect
+  - Name it: **"Sondare"**
+  - Add your App Store Connect API key
+- [ ] **Signing Certificates** uploaded to Codemagic:
+  - iOS Distribution certificate for `com.sondare.app`
+  - Provisioning profile for App Store distribution
+- [ ] **Configuration File** updated:
+  - `APP_STORE_APPLE_ID` → Your **REAL** App Store ID (NOT 1234567890)
+  - Email recipients updated with your real email
+- [ ] **Repository** connected to Codemagic
+- [ ] **Build trigger** configured (manual or on push)
 
-### 12. iOS Setup (App Store)
-- [ ] Add Apple Developer account to Codemagic
-- [ ] Upload provisioning profiles
-- [ ] Upload distribution certificate
-- [ ] Configure bundle ID (must match `capacitor.config.ts`)
-- [ ] Set version number and build number
+### ✅ App Store Connect
+- [ ] App created in App Store Connect
+- [ ] App Store ID obtained and added to `codemagic.yaml`
+- [ ] Bundle identifier set to: `com.sondare.app`
+- [ ] Privacy Policy URL prepared
+- [ ] Terms of Service URL prepared
+- [ ] Support URL prepared
 
-### 13. Android Setup (Google Play)
-- [ ] Add Google Play service account to Codemagic
-- [ ] Upload keystore file
-- [ ] Configure signing settings
-- [ ] Set package name (must match `capacitor.config.ts`)
-- [ ] Set version code and version name
+### ✅ Code & Assets
+- [ ] App icons generated (see `public/ICON_REQUIREMENTS.md`)
+- [ ] Environment variables in `.env`:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+- [ ] Supabase database migrations applied
+- [ ] Edge function deployed (`generate-app`)
+- [ ] App tested locally: `npm run dev`
+- [ ] Production build successful: `npm run build`
 
-### 14. App Store Connect Setup (iOS)
-- [ ] Create app in App Store Connect
-- [ ] Add app description and keywords
-- [ ] Upload app icon (1024x1024px)
-- [ ] Add screenshots (all required sizes)
-- [ ] Add privacy policy URL
-- [ ] Add terms of service URL
-- [ ] Set app category
-- [ ] Set age rating
-- [ ] Configure in-app purchases (for subscriptions)
+---
 
-### 15. Google Play Console Setup (Android)
-- [ ] Create app in Google Play Console
-- [ ] Add app description
-- [ ] Upload screenshots (phone, tablet, etc.)
-- [ ] Add privacy policy URL
-- [ ] Set content rating
-- [ ] Configure in-app billing (for subscriptions)
+## 🚀 How to Start Your First Build
 
-## Subscription Setup (Phase 2)
+### Option 1: Automatic Build (Recommended)
+1. Commit your updated `codemagic.yaml` to repository
+2. Push to your main branch
+3. Codemagic detects the push and starts building automatically
+4. Monitor progress in Codemagic dashboard
 
-### 16. Revenue Management
-- [ ] Set up RevenueCat account
-- [ ] Configure products in App Store Connect
-- [ ] Configure products in Google Play Console
-- [ ] Link RevenueCat to both stores
-- [ ] Add RevenueCat SDK to app
-- [ ] Test purchases in sandbox mode
+### Option 2: Manual Build
+1. Go to Codemagic dashboard
+2. Select your Sondare project
+3. Click **"Start new build"**
+4. Select **"ios-workflow"**
+5. Click **"Start build"**
 
-## Pre-Launch Testing
+---
 
-### 17. TestFlight Beta (iOS)
-- [ ] Build and upload to TestFlight
-- [ ] Add internal testers
-- [ ] Test complete user flow
-- [ ] Fix any critical bugs
-- [ ] Add external testers (optional)
-- [ ] Collect feedback
+## 🔄 What Happens During the Build
 
-### 18. Internal Testing (Android)
-- [ ] Upload to Google Play internal testing
-- [ ] Add test users
-- [ ] Test complete user flow
-- [ ] Fix any critical bugs
-- [ ] Move to closed beta (optional)
+The build process follows these steps:
 
-### 19. Final Checks
-- [ ] Test onboarding flow
-- [ ] Test signup and login
-- [ ] Test AI generation (uses credit)
-- [ ] Test project creation and viewing
-- [ ] Test all navigation tabs
-- [ ] Test logout and re-login
-- [ ] Verify credits are tracked correctly
-- [ ] Test on multiple device sizes
-- [ ] Test on slow network connection
-- [ ] Check all error messages display correctly
+1. ✅ Install npm dependencies
+2. ✅ Build web app (`npm run build`)
+3. ✅ Install Capacitor packages
+4. ✅ Add iOS platform
+5. ✅ **Configure iOS 14.0 deployment target** (fixes CocoaPods error)
+6. ✅ Install CocoaPods dependencies
+7. ✅ Copy web assets to native iOS app
+8. ✅ Set up code signing with your certificates
+9. ✅ **Auto-increment build number** (prevents duplicate errors)
+10. ✅ Build IPA file
+11. ✅ Upload to App Store Connect
+12. ✅ Submit to TestFlight
 
-## Launch
+---
 
-### 20. Submit to App Store (iOS)
-- [ ] Submit app for review from App Store Connect
-- [ ] Monitor review status
-- [ ] Respond to any rejection feedback
-- [ ] Once approved, release to public
+## 🎯 Build Number System (Auto-Increment)
 
-### 21. Submit to Google Play (Android)
-- [ ] Promote from testing to production
-- [ ] Submit for review
-- [ ] Monitor review status
-- [ ] Once approved, release to public
+The configuration now includes **intelligent build number management**:
 
-## Post-Launch
+### How It Works
 
-### 22. Monitoring
-- [ ] Set up analytics (Firebase, Mixpanel, etc.)
-- [ ] Monitor Supabase database usage
-- [ ] Monitor Edge Function performance
-- [ ] Track user signups and active users
-- [ ] Monitor crash reports
+**Scenario 1: APP_STORE_APPLE_ID Configured Correctly**
+- Fetches latest build number from App Store Connect
+- Auto-increments by 1
+- Example: If latest is `5`, new build becomes `6`
 
-### 23. Marketing
-- [ ] Announce launch on social media
-- [ ] Create landing page
-- [ ] Submit to app review sites
-- [ ] Collect user feedback
-- [ ] Plan feature updates
+**Scenario 2: APP_STORE_APPLE_ID Missing or Placeholder**
+- Uses timestamp-based build number
+- Format: `YYYYMMDDHHMM` (e.g., `202510211430`)
+- Ensures every build is unique
 
-## Common Issues & Solutions
+### Why This Matters
+- **No more duplicate build errors**
+- **No manual build number management**
+- **Works for first build and all future builds**
 
-### Build Fails in Codemagic
-- Check environment variables are set correctly
-- Verify Node version compatibility
-- Check for TypeScript errors
-- Review build logs for specific errors
+---
 
-### App Rejected by App Store
-- Common reasons:
-  - Missing privacy policy
-  - Incomplete metadata
-  - Crashes on launch
-  - Design doesn't follow guidelines
-- Fix issues and resubmit
+## 🐛 Common Issues & Solutions
 
-### Supabase Connection Issues
-- Verify API keys are correct
-- Check RLS policies allow operations
-- Verify Edge Function is deployed
-- Check network connectivity
+### ❌ Error: "The bundle version must be higher than previously uploaded version"
 
-## Timeline Estimate
+**Cause**: Build number already exists in App Store Connect
 
-- **Week 1-2**: Core development (DONE)
-- **Week 3**: Testing and Capacitor setup
-- **Week 4**: App Store submission and approval
-- **Week 5+**: Launch and marketing
+**Solution**:
+1. Verify `APP_STORE_APPLE_ID` in `codemagic.yaml` is your **REAL** App Store ID
+2. The auto-increment script will handle it automatically
+3. If it's your first build, timestamp fallback creates unique number
 
-## Support Resources
+### ❌ Error: "Could not find compatible versions for pod Capacitor"
 
-- Capacitor Docs: https://capacitorjs.com/docs
-- Codemagic Docs: https://docs.codemagic.io
-- Supabase Docs: https://supabase.com/docs
-- App Store Guidelines: https://developer.apple.com/app-store/review/guidelines/
-- Google Play Guidelines: https://play.google.com/about/developer-content-policy/
+**Cause**: iOS deployment target too low for Capacitor
 
-## Notes
+**Solution**: ✅ Already fixed! The updated `codemagic.yaml` sets iOS 14.0 correctly
 
-- Apple App Store review typically takes 2-7 days
-- Google Play review typically takes 1-3 days
-- Keep backup of signing certificates and keys
-- Test subscription flow thoroughly before launch
-- Monitor credit usage to prevent abuse
-- Consider rate limiting on Edge Functions
+### ❌ Error: "Code signing failed"
 
-Good luck with your launch!
+**Cause**: Certificates not configured in Codemagic
+
+**Solution**:
+1. Go to Codemagic → Your App → Settings → Code Signing
+2. Upload iOS Distribution certificate
+3. Upload Provisioning profile for `com.sondare.app`
+4. Ensure distribution type is "App Store"
+
+### ❌ Error: "While scanning a simple key... could not find expected ':'"
+
+**Cause**: YAML syntax error in `codemagic.yaml`
+
+**Solution**: ✅ Already fixed! The heredoc issue has been resolved
+
+---
+
+## ✅ After First Successful Build
+
+### 1. Verify Upload to App Store Connect
+1. Go to App Store Connect: https://appstoreconnect.apple.com
+2. Navigate to: **My Apps** → **Sondare** → **TestFlight**
+3. You should see status: **"Processing"** (takes 5-15 minutes)
+4. Once processed: Status changes to **"Ready to Test"**
+5. Build appears in TestFlight section
+
+### 2. Add Internal Testers (Optional)
+1. In TestFlight, click **"Internal Testing"**
+2. Add internal testers (your team members)
+3. Testers receive email invitation
+4. They can install via TestFlight app on their devices
+
+### 3. Test the Build
+- Download from TestFlight on real device
+- Test complete user flow:
+  - Signup/login
+  - AI generation
+  - Project management
+  - All navigation tabs
+
+---
+
+## 🔁 Subsequent Builds
+
+For every new build after the first:
+
+1. **Make code changes** in your repository
+2. **Commit and push** to main branch
+3. **Codemagic builds automatically** (if configured for auto-trigger)
+4. **Build number auto-increments** (no action needed)
+5. **New build uploads to App Store Connect**
+6. **TestFlight users notified** (if enabled)
+
+**✨ Zero manual intervention required!**
+
+---
+
+## 📱 Submitting to App Store Review
+
+Once you've tested in TestFlight and are ready for public release:
+
+### 1. Complete App Store Connect Information
+Use the guide in `APP_STORE_SUBMISSION_GUIDE.md` to fill out:
+- [ ] App name, subtitle, description
+- [ ] Keywords for search optimization
+- [ ] Screenshots (5-10 images at required sizes)
+- [ ] App preview video (optional but recommended)
+- [ ] Privacy Policy URL (must be live and accessible)
+- [ ] Terms of Service URL (must be live and accessible)
+- [ ] Support URL (must be live and accessible)
+- [ ] Age rating questionnaire
+- [ ] Pricing (Free with in-app purchases)
+- [ ] In-app purchase configuration
+
+### 2. Select Your Build
+1. Go to **App Store** tab (not TestFlight)
+2. Click **"Prepare for Submission"**
+3. Scroll to **"Build"** section
+4. Click **"+"** and select your tested build from TestFlight
+
+### 3. Submit for Review
+1. Review all information one last time
+2. Click **"Submit for Review"**
+3. Answer export compliance questions:
+   - **"Does your app use encryption?"** → Yes (HTTPS)
+   - **"Is it exempt?"** → Yes (standard encryption only)
+4. Click **"Submit"**
+
+### 4. Monitor Review Status
+- Check App Store Connect daily
+- Typical review time: **24-48 hours** (can take up to 7 days)
+- Respond quickly to any questions from Apple
+
+### 5. After Approval
+- App automatically goes live (or on your scheduled date)
+- Update `codemagic.yaml` line 81 to `submit_to_app_store: true` for future auto-submission
+
+---
+
+## 🎨 Required Assets Checklist
+
+Before submission, ensure you have:
+
+### App Icons (Required)
+- [ ] 1024x1024 for App Store listing
+- [ ] All device-specific sizes (see `public/ICON_REQUIREMENTS.md`)
+
+### Screenshots (Required - at least 5)
+- [ ] iPhone 6.7" (1290 x 2796 pixels) - Required
+- [ ] iPhone 6.5" (1242 x 2688 pixels) - Required
+- [ ] iPad Pro 12.9" (2048 x 2732 pixels) - Recommended
+
+### URLs (Required)
+- [ ] Privacy Policy hosted at public URL
+- [ ] Terms of Service hosted at public URL
+- [ ] Support page hosted at public URL
+
+### Legal Documents
+- [ ] Privacy Policy written (see PRIVACY_POLICY.md template)
+- [ ] Terms of Service written (see TERMS_OF_SERVICE.md template)
+- [ ] Support email set up (currently placeholder: support@sondare.com)
+
+---
+
+## 🎯 Quick Command Reference
+
+### Local Development
+```bash
+npm install          # Install dependencies
+npm run dev          # Start dev server (http://localhost:5173)
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run typecheck    # Check TypeScript errors
+```
+
+### Capacitor Commands
+```bash
+npm install @capacitor/core @capacitor/cli @capacitor/ios
+npx cap add ios              # Add iOS platform (one-time)
+npx cap sync ios             # Sync web build to iOS
+npx cap open ios             # Open in Xcode (for local testing)
+```
+
+### Testing Production Build Locally
+```bash
+npm run build && npx cap sync ios && npx cap open ios
+```
+Then build from Xcode to test on simulator or device before Codemagic build.
+
+---
+
+## 📊 Post-Launch Monitoring
+
+### Metrics to Track
+- Daily/monthly active users
+- Signup conversion rate
+- AI generation usage
+- Credit consumption patterns
+- Subscription conversion (free → Pro/Teams)
+- App Store ratings and reviews
+- Crash rate and stability
+
+### Tools
+- **App Store Connect Analytics** (built-in)
+- **Supabase Dashboard** (database metrics)
+- **Codemagic** (build success rate)
+- Optional: Firebase Analytics, Mixpanel
+
+---
+
+## 🆘 Support Resources
+
+### Documentation
+- **Capacitor**: https://capacitorjs.com/docs
+- **Codemagic**: https://docs.codemagic.io
+- **Supabase**: https://supabase.com/docs
+- **App Store Guidelines**: https://developer.apple.com/app-store/review/guidelines/
+
+### Sondare Project Files
+- **App Store Guide**: `APP_STORE_SUBMISSION_GUIDE.md`
+- **Privacy Policy**: `PRIVACY_POLICY.md`
+- **Terms of Service**: `TERMS_OF_SERVICE.md`
+- **Support Info**: `SUPPORT.md`
+- **Icon Requirements**: `public/ICON_REQUIREMENTS.md`
+
+### Getting Help
+- **Codemagic Support**: support@codemagic.io
+- **Apple Developer**: https://developer.apple.com/contact/
+- **Supabase Discord**: https://discord.supabase.com
+
+---
+
+## ✅ Final Pre-Build Verification
+
+**Complete this checklist before starting your first build:**
+
+- [ ] Created app in App Store Connect
+- [ ] Got App Store ID from App Information page
+- [ ] Updated `APP_STORE_APPLE_ID` in `codemagic.yaml` (line 16)
+- [ ] Updated email addresses in `codemagic.yaml` (lines 79, 112)
+- [ ] Configured "Sondare" integration in Codemagic
+- [ ] Uploaded signing certificates to Codemagic
+- [ ] Connected repository to Codemagic
+- [ ] Verified `.env` has Supabase credentials
+- [ ] All code committed and pushed to repository
+- [ ] Database migrations applied
+- [ ] Edge function deployed and working
+
+**✅ If all boxes checked, you're ready to build!**
+
+---
+
+## 🎉 Success Indicators
+
+You'll know everything is working when:
+
+1. ✅ Codemagic build completes without errors
+2. ✅ IPA file uploads to App Store Connect successfully
+3. ✅ Build appears in TestFlight as "Processing"
+4. ✅ Build becomes "Ready to Test" after processing
+5. ✅ You can install and run app from TestFlight
+6. ✅ All features work in TestFlight version
+7. ✅ Build number auto-incremented correctly
+
+---
+
+## 📅 Typical Timeline
+
+- **Day 1**: Complete this checklist, trigger first build
+- **Day 1**: Build succeeds, appears in TestFlight
+- **Days 2-7**: Internal testing via TestFlight
+- **Day 8**: Submit to App Store review
+- **Days 9-11**: Apple reviews (24-48 hours typical)
+- **Day 12**: App goes live on App Store! 🎉
+
+---
+
+**Last Updated**: October 2024
+
+**Remember**: The hard part is the setup. Once the first build succeeds, all future builds are automatic! 🚀
+
+---
+
+## 💡 Pro Tips
+
+1. **Test Early**: Use TestFlight extensively before submitting to App Store
+2. **Monitor Logs**: Always check Codemagic logs if build fails
+3. **Keep Certificates Safe**: Back up your signing certificates
+4. **Update Regularly**: Plan app updates every 2-4 weeks
+5. **Respond to Reviews**: Engage with users in App Store reviews
+6. **Track Metrics**: Use analytics to understand user behavior
+7. **Have Patience**: First build setup takes time, but it's worth it!
+
+**Good luck with your launch! 🚀**

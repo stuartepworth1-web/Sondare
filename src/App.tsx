@@ -5,17 +5,24 @@ import { InteractiveTutorial } from './components/InteractiveTutorial';
 import { Auth } from './components/Auth';
 import { TabNavigation } from './components/TabNavigation';
 import { HowToGuide } from './components/HowToGuide';
+import { UpgradeModalIAP } from './components/UpgradeModalIAP';
 import { Home } from './screens/Home';
 import { Builder } from './screens/Builder';
 import { Design } from './screens/Design';
 import { Projects } from './screens/Projects';
+import { PrivacyPolicy } from './screens/PrivacyPolicy';
+import { TermsOfService } from './screens/TermsOfService';
+import { Support } from './screens/Support';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'builder' | 'design' | 'projects'>('home');
   const [showHowTo, setShowHowTo] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [currentRoute, setCurrentRoute] = useState(window.location.pathname);
+  const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const onboarded = localStorage.getItem('hasSeenOnboarding');
@@ -23,6 +30,13 @@ function AppContent() {
 
     if (onboarded) setHasSeenOnboarding(true);
     if (tutorialed) setHasSeenTutorial(true);
+
+    const handlePopState = () => {
+      setCurrentRoute(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const handleOnboardingComplete = () => {
@@ -34,6 +48,18 @@ function AppContent() {
     localStorage.setItem('hasSeenTutorial', 'true');
     setHasSeenTutorial(true);
   };
+
+  if (currentRoute === '/privacy-policy') {
+    return <PrivacyPolicy />;
+  }
+
+  if (currentRoute === '/terms-of-service') {
+    return <TermsOfService />;
+  }
+
+  if (currentRoute === '/support') {
+    return <Support />;
+  }
 
   if (loading) {
     return (
@@ -58,16 +84,29 @@ function AppContent() {
     return <InteractiveTutorial onComplete={handleTutorialComplete} />;
   }
 
+  const handleContinueEditing = (projectId: string) => {
+    setEditingProjectId(projectId);
+    setActiveTab('builder');
+  };
+
+  const handleTabChange = (tab: 'home' | 'builder' | 'design' | 'projects') => {
+    if (tab !== 'builder') {
+      setEditingProjectId(undefined);
+    }
+    setActiveTab(tab);
+  };
+
   return (
     <div className="relative">
-      {activeTab === 'home' && <Home onShowHowTo={() => setShowHowTo(true)} onNavigate={setActiveTab} />}
-      {activeTab === 'builder' && <Builder />}
+      {activeTab === 'home' && <Home onShowHowTo={() => setShowHowTo(true)} onNavigate={setActiveTab} onShowUpgrade={() => setShowUpgrade(true)} />}
+      {activeTab === 'builder' && <Builder onShowUpgrade={() => setShowUpgrade(true)} initialProjectId={editingProjectId} />}
       {activeTab === 'design' && <Design />}
-      {activeTab === 'projects' && <Projects />}
+      {activeTab === 'projects' && <Projects onContinueEditing={handleContinueEditing} />}
 
-      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
       {showHowTo && <HowToGuide onClose={() => setShowHowTo(false)} />}
+      {showUpgrade && <UpgradeModalIAP onClose={() => setShowUpgrade(false)} currentTier={profile?.subscription_tier || 'free'} />}
     </div>
   );
 }

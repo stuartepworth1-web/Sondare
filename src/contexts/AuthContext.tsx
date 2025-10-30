@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { initializePurchases } from '../lib/purchases';
 
 interface Profile {
   id: string;
   email: string;
-  subscription_tier: 'free' | 'pro' | 'teams';
+  subscription_tier: 'free' | 'pro' | 'entrepreneur';
   credits_remaining: number;
   credits_purchased: number;
 }
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id).finally(() => setLoading(false));
+        initializePurchases(session.user.id);
       } else {
         setLoading(false);
       }
@@ -67,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (session?.user) {
             await fetchProfile(session.user.id);
+            initializePurchases(session.user.id);
           } else {
             setProfile(null);
           }

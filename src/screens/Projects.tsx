@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FolderOpen, Plus, Loader2, Eye, Download, Trash2 } from 'lucide-react';
+import { FolderOpen, Plus, Loader2, Eye, Download, Trash2, Edit } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ProjectPreview } from '../components/ProjectPreview';
@@ -10,10 +10,15 @@ interface Project {
   description: string;
   app_type: string;
   status: 'draft' | 'generating' | 'completed' | 'error';
+  is_active_session: boolean;
   created_at: string;
 }
 
-export function Projects() {
+interface ProjectsProps {
+  onContinueEditing?: (projectId: string) => void;
+}
+
+export function Projects({ onContinueEditing }: ProjectsProps = {}) {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,13 +134,20 @@ export function Projects() {
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold text-base sm:text-lg flex-1 min-w-0">{project.name}</h3>
-                  <span
-                    className={`text-[10px] sm:text-xs px-2 py-1 rounded-full flex-shrink-0 ${getStatusColor(
-                      project.status
-                    )}`}
-                  >
-                    {project.status}
-                  </span>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {project.is_active_session && (
+                      <span className="text-[10px] sm:text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-500">
+                        Active
+                      </span>
+                    )}
+                    <span
+                      className={`text-[10px] sm:text-xs px-2 py-1 rounded-full ${getStatusColor(
+                        project.status
+                      )}`}
+                    >
+                      {project.status}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-white/60 text-xs sm:text-sm line-clamp-2">
                   {project.description}
@@ -150,10 +162,18 @@ export function Projects() {
               </div>
 
               <div className="flex gap-2">
+                {onContinueEditing && (
+                  <button
+                    onClick={() => onContinueEditing(project.id)}
+                    className="flex-1 glass-button py-2 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm active:scale-95"
+                  >
+                    <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    Continue
+                  </button>
+                )}
                 <button
                   onClick={() => setPreviewProject(project)}
                   className="flex-1 glass-button py-2 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm active:scale-95"
-                  disabled={project.status !== 'completed'}
                 >
                   <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Preview

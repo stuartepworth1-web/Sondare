@@ -11,69 +11,82 @@ interface GenerateRequest {
   prompt: string;
 }
 
-const appTemplates = {
-  social: {
-    screens: ['Login', 'Feed', 'Profile', 'Messages', 'Settings'],
-    components: ['PostCard', 'UserAvatar', 'CommentList', 'LikeButton'],
-    features: ['User authentication', 'Post creation', 'Follow system', 'Real-time messaging'],
-  },
-  ecommerce: {
-    screens: ['Home', 'ProductList', 'ProductDetail', 'Cart', 'Checkout'],
-    components: ['ProductCard', 'CartItem', 'PaymentForm', 'ReviewList'],
-    features: ['Product catalog', 'Shopping cart', 'Checkout flow', 'Order history'],
-  },
-  productivity: {
-    screens: ['Dashboard', 'TaskList', 'Calendar', 'Analytics', 'Settings'],
-    components: ['TaskCard', 'DatePicker', 'ProgressBar', 'ChartWidget'],
-    features: ['Task management', 'Calendar integration', 'Analytics dashboard', 'Team collaboration'],
-  },
-  fitness: {
-    screens: ['Home', 'WorkoutTracker', 'Progress', 'Plans', 'Settings'],
-    components: ['ExerciseCard', 'ProgressChart', 'WorkoutTimer', 'GoalWidget'],
-    features: ['Workout tracking', 'Progress charts', 'Workout plans', 'Goal setting'],
-  },
-  finance: {
-    screens: ['Dashboard', 'Accounts', 'Transactions', 'Budget', 'Reports'],
-    components: ['AccountCard', 'TransactionList', 'BudgetWidget', 'PieChart'],
-    features: ['Account management', 'Transaction tracking', 'Budget planning', 'Financial reports'],
-  },
-};
+async function generateWithClaude(prompt: string) {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
-function detectAppType(prompt: string): keyof typeof appTemplates {
-  const lowerPrompt = prompt.toLowerCase();
-  
-  if (lowerPrompt.includes('social') || lowerPrompt.includes('feed') || lowerPrompt.includes('post')) {
-    return 'social';
-  } else if (lowerPrompt.includes('ecommerce') || lowerPrompt.includes('shop') || lowerPrompt.includes('store')) {
-    return 'ecommerce';
-  } else if (lowerPrompt.includes('fitness') || lowerPrompt.includes('workout') || lowerPrompt.includes('exercise')) {
-    return 'fitness';
-  } else if (lowerPrompt.includes('finance') || lowerPrompt.includes('budget') || lowerPrompt.includes('money')) {
-    return 'finance';
-  } else if (lowerPrompt.includes('task') || lowerPrompt.includes('todo') || lowerPrompt.includes('productivity')) {
-    return 'productivity';
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY not configured');
   }
-  
-  return 'productivity';
+
+  const systemPrompt = `You are an expert mobile app designer and React developer. Generate a complete mobile app structure based on the user's prompt.
+
+CRITICAL: You MUST return ONLY valid JSON. No markdown, no code blocks, no backticks, no explanation text. Just pure JSON.
+
+Return a JSON object with this exact structure:
+{
+  "name": "App Name (max 4 words)",
+  "appType": "social|ecommerce|productivity|fitness|finance|other",
+  "screens": ["ScreenName1", "ScreenName2"],
+  "components": ["ComponentName1", "ComponentName2"],
+  "features": ["Feature description 1", "Feature description 2"],
+  "colorScheme": {
+    "primary": "#hexcolor",
+    "secondary": "#hexcolor",
+    "background": "#hexcolor",
+    "text": "#hexcolor"
+  }
 }
 
-function generateAppStructure(appType: keyof typeof appTemplates, prompt: string) {
-  const template = appTemplates[appType];
+Guidelines:
+- Generate 4-6 screens appropriate for the app type
+- Generate 4-8 reusable components
+- List 4-6 key features
+- Use modern, professional color schemes (avoid purple/indigo unless requested)
+- IMPORTANT: Do not include code in the response, only the structure
+- Return ONLY the JSON object, no other text`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: `Generate a mobile app structure for: ${prompt}`,
+        },
+      ],
+      system: systemPrompt,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Claude API error: ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.content[0].text;
+
+  let jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Failed to parse Claude response - no JSON found');
+  }
+
+  let jsonStr = jsonMatch[0];
   
-  return {
-    name: prompt.split(' ').slice(0, 4).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-    appType,
-    screens: template.screens,
-    components: template.components,
-    features: template.features,
-    colorScheme: {
-      primary: '#FF9500',
-      background: '#000000',
-    },
-    code: {
-      'App.tsx': `import { useState } from 'react';\n\nfunction App() {\n  return (\n    <div className="min-h-screen bg-black text-white">\n      <h1>Your ${appType} App</h1>\n    </div>\n  );\n}\n\nexport default App;`,
-    },
-  };
+  try {
+    return JSON.parse(jsonStr);
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    console.error('Attempted to parse:', jsonStr.substring(0, 500));
+    throw new Error('Failed to parse Claude response as valid JSON');
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -128,8 +141,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const appType = detectAppType(prompt);
-    const appStructure = generateAppStructure(appType, prompt);
+    const startTime = Date.now();
+    const appStructure = await generateWithClaude(prompt);
+    const processingTime = Math.round((Date.now() - startTime) / 1000);
 
     const { data: project, error: projectError } = await supabase
       .from('projects')
@@ -137,7 +151,7 @@ Deno.serve(async (req: Request) => {
         user_id: user.id,
         name: appStructure.name,
         description: prompt,
-        app_type: appType,
+        app_type: appStructure.appType,
         status: 'generating',
         color_scheme: appStructure.colorScheme,
       })
@@ -151,14 +165,14 @@ Deno.serve(async (req: Request) => {
       .insert({
         project_id: project.id,
         prompt,
-        generated_code: appStructure.code,
+        generated_code: {},
         generated_schema: {
           screens: appStructure.screens,
           components: appStructure.components,
           features: appStructure.features,
         },
-        ai_model: 'template-based',
-        processing_time: 2,
+        ai_model: 'claude-3-5-sonnet-20241022',
+        processing_time: processingTime,
         status: 'completed',
       });
 
@@ -184,11 +198,11 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `I've created your ${appType} app! It includes ${appStructure.screens.length} screens and ${appStructure.components.length} components. Check the Projects tab to view it.`,
+        message: `I've created your ${appStructure.appType} app! It includes ${appStructure.screens.length} screens and ${appStructure.components.length} components. Check the Projects tab to view it.`,
         project: {
           id: project.id,
           name: appStructure.name,
-          appType,
+          appType: appStructure.appType,
         },
       }),
       {

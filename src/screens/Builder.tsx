@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertCircle, Eye, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { ProjectPreview } from '../components/ProjectPreview';
 
 interface Message {
   id: string;
@@ -10,8 +11,19 @@ interface Message {
   timestamp: Date;
 }
 
-export function Builder() {
-  const { profile, refreshProfile, session } = useAuth();
+interface BuilderProps {
+  onShowUpgrade: () => void;
+  initialProjectId?: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+}
+
+export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
+  const { profile, refreshProfile, session, user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -23,6 +35,8 @@ export function Builder() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
@@ -31,11 +45,96 @@ export function Builder() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (initialProjectId) {
+      loadSpecificProject(initialProjectId);
+    } else {
+      loadActiveSession();
+    }
+  }, [user, initialProjectId]);
+
+  const loadSpecificProject = async (projectId: string) => {
+    if (!user) return;
+
+    try {
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id, name, status')
+        .eq('id', projectId)
+        .maybeSingle();
+
+      if (project) {
+        await supabase
+          .from('projects')
+          .update({ is_active_session: true })
+          .eq('id', projectId);
+
+        setCurrentProject(project);
+
+        const { data: conversationMessages } = await supabase
+          .from('conversation_messages')
+          .select('role, content, created_at')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: true });
+
+        if (conversationMessages && conversationMessages.length > 0) {
+          const loadedMessages: Message[] = conversationMessages.map((msg, idx) => ({
+            id: `${idx + 2}`,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+          }));
+          setMessages([messages[0], ...loadedMessages]);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading specific project:', err);
+    }
+  };
+
+  const loadActiveSession = async () => {
+    if (!user) return;
+
+    try {
+      const { data: activeProject } = await supabase
+        .from('projects')
+        .select('id, name, status')
+        .eq('user_id', user.id)
+        .eq('is_active_session', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (activeProject) {
+        setCurrentProject(activeProject);
+
+        const { data: conversationMessages } = await supabase
+          .from('conversation_messages')
+          .select('role, content, created_at')
+          .eq('project_id', activeProject.id)
+          .order('created_at', { ascending: true });
+
+        if (conversationMessages && conversationMessages.length > 0) {
+          const loadedMessages: Message[] = conversationMessages.map((msg, idx) => ({
+            id: `${idx + 2}`,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+          }));
+          setMessages([messages[0], ...loadedMessages]);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading active session:', err);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
     if (totalCredits <= 0) {
       setError('No credits remaining. Please upgrade your plan to continue.');
+      onShowUpgrade();
       return;
     }
 
@@ -57,19 +156,23 @@ export function Builder() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-app`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-with-builder`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ prompt: userMessage.content }),
+          body: JSON.stringify({
+            message: userMessage.content,
+            projectId: currentProject?.id
+          }),
         }
       );
 
       if (!response.ok) {
-        throw new Error('Failed to generate app');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to chat with builder');
       }
 
       const data = await response.json();
@@ -77,11 +180,24 @@ export function Builder() {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message || "I've started working on your app! Check the Projects tab to see the progress.",
+        content: data.message,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      if (data.projectId && !currentProject) {
+        const { data: project } = await supabase
+          .from('projects')
+          .select('id, name, status')
+          .eq('id', data.projectId)
+          .single();
+
+        if (project) {
+          setCurrentProject(project);
+        }
+      }
+
       await refreshProfile();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -106,16 +222,63 @@ export function Builder() {
     }
   };
 
+  const completeSession = async () => {
+    if (!currentProject) return;
+
+    try {
+      await supabase
+        .from('projects')
+        .update({
+          is_active_session: false,
+          status: 'completed'
+        })
+        .eq('id', currentProject.id);
+
+      setCurrentProject(null);
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: "Hi! I'm your AI app builder. Describe the app you want to create, and I'll help bring it to life. What kind of app are you thinking of?",
+        timestamp: new Date(),
+      }]);
+    } catch (err) {
+      console.error('Error completing session:', err);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col pb-24">
       <div className="glass-card m-3 sm:m-4 mb-0 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
           <span className="font-semibold text-sm sm:text-base">AI Builder</span>
+          {currentProject && (
+            <span className="text-xs text-white/60">• {currentProject.name}</span>
+          )}
         </div>
-        <div className="text-xs sm:text-sm flex-shrink-0">
-          <span className="text-white/60">Credits: </span>
-          <span className="font-semibold text-orange-500">{totalCredits}</span>
+        <div className="flex items-center gap-2">
+          {currentProject && (
+            <>
+              <button
+                onClick={() => setShowPreview(true)}
+                className="glass-button p-2"
+                title="Preview"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                onClick={completeSession}
+                className="glass-button p-2"
+                title="Complete Project"
+              >
+                <CheckCircle className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <div className="text-xs sm:text-sm flex-shrink-0">
+            <span className="text-white/60">Credits: </span>
+            <span className="font-semibold text-orange-500">{totalCredits}</span>
+          </div>
         </div>
       </div>
 
@@ -190,9 +353,17 @@ export function Builder() {
           </button>
         </div>
         <p className="text-[10px] sm:text-xs text-white/40 mt-2 text-center">
-          Each generation uses 1 credit
+          Questions are free • Actions use 1 credit
         </p>
       </div>
+
+      {showPreview && currentProject && (
+        <ProjectPreview
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }

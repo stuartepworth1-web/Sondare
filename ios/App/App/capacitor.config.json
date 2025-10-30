@@ -17,5 +17,7 @@
 			"showSpinner": false
 		}
 	},
-	"packageClassList": []
+	"packageClassList": [
+		"PurchasesPlugin"
+	]
 }
