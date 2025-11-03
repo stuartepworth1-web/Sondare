@@ -33,11 +33,6 @@ workflows:
             sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
             cd ios/App && pod install
           fi
-      - name: Generate app icons from SVG
-        script: |
-          brew install librsvg
-          mkdir -p ios/App/App/Assets.xcassets/AppIcon.appiconset
-          rsvg-convert -w 1024 -h 1024 sondare-icon.svg -o ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
