@@ -19,35 +19,25 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
-      - name: Build web app
-        script: |
-          npm run build
       - name: Install Capacitor
         script: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios
-      - name: Add iOS platform and configure deployment target
+      - name: Build web app
         script: |
-          npx cap add ios || true
+          npm run build
+      - name: Sync Capacitor and configure iOS
+        script: |
+          npx cap sync ios
           if [ -f ios/App/Podfile ]; then
-            echo "platform :ios, '14.0'" > ios/App/Podfile
-            echo "use_frameworks!" >> ios/App/Podfile
-            echo "" >> ios/App/Podfile
-            echo "install! 'cocoapods', :disable_input_output_paths => true" >> ios/App/Podfile
-            echo "" >> ios/App/Podfile
-            echo "def capacitor_pods" >> ios/App/Podfile
-            echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
-            echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
-            echo "end" >> ios/App/Podfile
-            echo "" >> ios/App/Podfile
-            echo "target 'App' do" >> ios/App/Podfile
-            echo "  capacitor_pods" >> ios/App/Podfile
-            echo "end" >> ios/App/Podfile
+            sed -i '' "s/platform :ios, '[0-9]*\.[0-9]*'/platform :ios, '14.0'/g" ios/App/Podfile || echo "platform :ios, '14.0'" > ios/App/Podfile.tmp && cat ios/App/Podfile >> ios/App/Podfile.tmp && mv ios/App/Podfile.tmp ios/App/Podfile
             sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
             cd ios/App && pod install
           fi
-      - name: Copy web assets to native project
+      - name: Generate app icons from SVG
         script: |
-          npx cap copy ios
+          brew install librsvg
+          mkdir -p ios/App/App/Assets.xcassets/AppIcon.appiconset
+          rsvg-convert -w 1024 -h 1024 sondare-icon.svg -o ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
