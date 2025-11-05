@@ -19,7 +19,6 @@ workflows:
         VITE_REVENUECAT_IOS_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
       node: 20
     scripts:
-      - name: Install dependencies
         - name: Install dependencies
         script: |
           npm install --legacy-peer-deps
