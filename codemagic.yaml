@@ -18,8 +18,8 @@ workflows:
         VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6cWpjcnpmeXB4aWhueG9rYnd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1Mjc5NDIsImV4cCI6MjA3NjEwMzk0Mn0.0CVu1LukIlx7LpM4xDvTSxLaZ06vsOiISwaaaiB_PAg"
         VITE_REVENUECAT_IOS_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
       node: 20
-    scripts:
-        - name: Install dependencies
+          scripts:
+      - name: Install dependencies
         script: |
           npm install --legacy-peer-deps
 
