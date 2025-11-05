@@ -20,8 +20,10 @@ workflows:
       node: 20
     scripts:
       - name: Install dependencies
-  script: |
-    npm install --legacy-peer-deps
+        - name: Install dependencies
+        script: |
+          npm install --legacy-peer-deps
+
       - name: Install Capacitor
         script: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios --legacy-peer-deps
