@@ -24,7 +24,7 @@ workflows:
           npm install
       - name: Install Capacitor
         script: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npm install @capacitor/core @capacitor/cli @capacitor/ios --legacy-peer-deps
       - name: Create .env file
         script: |
           echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" > .env
