@@ -20,9 +20,9 @@ workflows:
       node: 20
     scripts:
       - name: Install dependencies
-  script: |
-    rm -rf node_modules package-lock.json
-    npm install --legacy-peer-deps
+        script: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Install Capacitor
         script: |
@@ -92,9 +92,9 @@ workflows:
       node: 20
     scripts:
       - name: Install dependencies
-  script: |
-    rm -rf node_modules package-lock.json
-    npm install --legacy-peer-deps
+        script: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
       - name: Build web app
         script: |
           npm run build
