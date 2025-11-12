@@ -1,8 +1,8 @@
-import { Home, MessageSquare, Palette, FolderOpen } from 'lucide-react';
+import { Home, MessageSquare, Palette, FolderOpen, Settings } from 'lucide-react';
 
 interface TabNavigationProps {
-  activeTab: 'home' | 'builder' | 'design' | 'projects';
-  onTabChange: (tab: 'home' | 'builder' | 'design' | 'projects') => void;
+  activeTab: 'home' | 'builder' | 'design' | 'projects' | 'settings';
+  onTabChange: (tab: 'home' | 'builder' | 'design' | 'projects' | 'settings') => void;
 }
 
 const tabs = [
@@ -10,6 +10,7 @@ const tabs = [
   { id: 'builder' as const, icon: MessageSquare, label: 'Builder' },
   { id: 'design' as const, icon: Palette, label: 'Design' },
   { id: 'projects' as const, icon: FolderOpen, label: 'Projects' },
+  { id: 'settings' as const, icon: Settings, label: 'Settings' },
 ];
 
 export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
@@ -39,3 +40,4 @@ export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
     </nav>
   );
 }
+
