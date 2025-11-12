@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Onboarding } from './components/Onboarding';
 import { InteractiveTutorial } from './components/InteractiveTutorial';
@@ -10,6 +11,7 @@ import { Home } from './screens/Home';
 import { Builder } from './screens/Builder';
 import { Design } from './screens/Design';
 import { Projects } from './screens/Projects';
+import { Settings } from './screens/Settings';
 import { PrivacyPolicy } from './screens/PrivacyPolicy';
 import { TermsOfService } from './screens/TermsOfService';
 import { Support } from './screens/Support';
@@ -18,7 +20,7 @@ function AppContent() {
   const { user, loading, profile } = useAuth();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
-  const [activeTab, setActiveTab] = useState<'home' | 'builder' | 'design' | 'projects'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'builder' | 'design' | 'projects' | 'settings'>('home');
   const [showHowTo, setShowHowTo] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [currentRoute, setCurrentRoute] = useState(window.location.pathname);
@@ -89,7 +91,7 @@ function AppContent() {
     setActiveTab('builder');
   };
 
-  const handleTabChange = (tab: 'home' | 'builder' | 'design' | 'projects') => {
+  const handleTabChange = (tab: 'home' | 'builder' | 'design' | 'projects' | 'settings') => {
     if (tab !== 'builder') {
       setEditingProjectId(undefined);
     }
@@ -102,6 +104,7 @@ function AppContent() {
       {activeTab === 'builder' && <Builder onShowUpgrade={() => setShowUpgrade(true)} initialProjectId={editingProjectId} />}
       {activeTab === 'design' && <Design />}
       {activeTab === 'projects' && <Projects onContinueEditing={handleContinueEditing} />}
+      {activeTab === 'settings' && <Settings onShowUpgrade={() => setShowUpgrade(true)} />}
 
       <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
