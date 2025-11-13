@@ -1,281 +1,331 @@
-import { X, Zap, Check, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { isNativePlatform, getOfferings, purchasePackage, restorePurchases } from '../lib/purchases';
-import { supabase } from '../lib/supabase';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { X, Zap, Check } from 'lucide-react-native';
 
-interface UpgradeModalProps {
+interface UpgradeModalIAPProps {
+  visible: boolean;
   onClose: () => void;
   currentTier: 'free' | 'starter' | 'pro' | 'entrepreneur';
   onUpgradeSuccess?: () => void;
 }
 
-interface PlanConfig {
-  tier: string;
+interface PlanData {
+  id: string;
   name: string;
   price: string;
   credits: number;
   features: string[];
-  productId: string;
+  highlighted?: boolean;
 }
 
-export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: UpgradeModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [restoring, setRestoring] = useState(false);
-  const [offerings, setOfferings] = useState<any>(null);
-  const isNative = isNativePlatform();
+const plans: PlanData[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: '$4.99',
+    credits: 20,
+    features: [
+      '20 AI Generations/month',
+      'All core features',
+      'Export to code',
+      'Email support',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '$9.99',
+    credits: 50,
+    features: [
+      '50 AI Generations/month',
+      'All core features',
+      'Advanced customization',
+      'Priority support',
+      'Early access to new features',
+    ],
+    highlighted: true,
+  },
+  {
+    id: 'entrepreneur',
+    name: 'Entrepreneur',
+    price: '$29.99',
+    credits: 200,
+    features: [
+      '200 AI Generations/month',
+      'All Pro features',
+      'White-label options',
+      'Dedicated support',
+      'Custom integrations',
+      'Team collaboration',
+    ],
+  },
+];
 
-  const plans: PlanConfig[] = [
-    {
-      tier: 'free',
-      name: 'Free Plan',
-      price: 'Free',
-      credits: 3,
-      productId: '',
-      features: [
-        '3 AI generations per month',
-        'Basic templates',
-        'Community support',
-        'Export to web',
-      ],
-    },
-    {
-      tier: 'starter',
-      name: 'Starter Plan',
-      price: '$4.99',
-      credits: 20,
-      productId: 'com.sondare.app.starter.monthly',
-      features: [
-        '20 AI generations per month',
-        'Email support',
-        'Basic templates',
-        'Export to iOS & Android',
-      ],
-    },
-    {
-      tier: 'pro',
-      name: 'Pro Plan',
-      price: '$9.99',
-      credits: 50,
-      productId: 'com.sondare.app.pro.monthly',
-      features: [
-        '50 AI generations per month',
-        'Priority support',
-        'Advanced templates',
-        'Export to iOS & Android',
-      ],
-    },
-    {
-      tier: 'entrepreneur',
-      name: 'Entrepreneur Plan',
-      price: '$29.99',
-      credits: 200,
-      productId: 'com.sondare.app.entrepreneur.monthly',
-      features: [
-        '200 AI generations per month',
-        'Priority support',
-        'All templates',
-        'Export to iOS & Android',
-        'Custom branding',
-        'Team collaboration',
-      ],
-    },
-  ];
+export function UpgradeModalIAP({
+  visible,
+  onClose,
+  currentTier,
+  onUpgradeSuccess,
+}: UpgradeModalIAPProps) {
+  const handlePurchase = async (planId: string) => {
+    console.log('Purchase initiated for plan:', planId);
 
-  useEffect(() => {
-    if (isNative) {
-      loadOfferings();
-    }
-  }, [isNative]);
-
-  const loadOfferings = async () => {
-    try {
-      const currentOffering = await getOfferings();
-      setOfferings(currentOffering);
-    } catch (error) {
-      console.error('Failed to load offerings:', error);
-    }
-  };
-
-  const handleUpgrade = async (plan: PlanConfig) => {
-    if (plan.tier === 'free' || currentTier === plan.tier) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      if (isNative) {
-        await handleIAPPurchase(plan);
-      } else {
-        await handleStripePurchase(plan);
-      }
-    } catch (error: any) {
-      if (error.code !== 'PURCHASE_CANCELLED_ERROR') {
-        alert('Purchase failed. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleIAPPurchase = async (plan: PlanConfig) => {
-    if (!offerings?.availablePackages) {
-      alert('Products not available. Please try again later.');
-      return;
-    }
-
-    const packageToPurchase = offerings.availablePackages.find(
-      (pkg: any) => pkg.product.identifier === plan.productId
-    );
-
-    if (!packageToPurchase) {
-      alert('Product not found. Please contact support.');
-      return;
-    }
-
-    const customerInfo = await purchasePackage(packageToPurchase);
-
-    const user = await supabase.auth.getUser();
-    if (user.data.user) {
-      await supabase
-        .from('profiles')
-        .update({
-          subscription_tier: plan.tier,
-          payment_provider: 'apple_iap',
-          subscription_id: customerInfo.originalAppUserId,
-          subscription_status: 'active',
-        })
-        .eq('id', user.data.user.id);
-
-      onUpgradeSuccess?.();
-      onClose();
-    }
-  };
-
-  const handleStripePurchase = async (plan: PlanConfig) => {
-    alert('Stripe integration: Redirect to Stripe checkout for ' + plan.name);
-  };
-
-  const handleRestore = async () => {
-    if (!isNative) return;
-
-    setRestoring(true);
-    try {
-      const customerInfo = await restorePurchases();
-
-      if (customerInfo.entitlements.active) {
-        alert('Purchases restored successfully!');
-        onUpgradeSuccess?.();
-        onClose();
-      } else {
-        alert('No active purchases found.');
-      }
-    } catch (error) {
-      alert('Failed to restore purchases. Please try again.');
-    } finally {
-      setRestoring(false);
-    }
+    // TODO: Implement RevenueCat purchase flow
+    // Example:
+    // try {
+    //   const purchaseResult = await Purchases.purchasePackage(package);
+    //   onUpgradeSuccess?.();
+    //   onClose();
+    // } catch (error) {
+    //   console.error('Purchase error:', error);
+    // }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="glass-card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-black/40 backdrop-blur-md p-4 sm:p-6 border-b border-white/10 flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-bold">Upgrade Your Plan</h2>
-          <button
-            onClick={onClose}
-            className="glass-button p-2"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Upgrade Your Plan</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <X size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
 
-        <div className="p-4 sm:p-6 space-y-4">
-          {isNative && (
-            <div className="flex justify-end">
-              <button
-                onClick={handleRestore}
-                disabled={restoring}
-                className="text-sm text-orange-500 hover:text-orange-400 disabled:opacity-50"
-              >
-                {restoring ? 'Restoring...' : 'Restore Purchases'}
-              </button>
-            </div>
-          )}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.plansContainer}>
+            {plans.map((plan) => {
+              const isCurrentPlan = currentTier === plan.id;
+              const isHighlighted = plan.highlighted;
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {plans.map((plan) => (
-              <div
-                key={plan.tier}
-                className={`glass-card p-6 space-y-4 ${
-                  currentTier === plan.tier ? 'border-2 border-orange-500' : ''
-                }`}
-              >
-                <div>
-                  <h3 className="text-xl font-bold">{plan.name}</h3>
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-3xl font-bold text-orange-500">
-                      {plan.price}
-                    </span>
-                    {plan.tier !== 'free' && (
-                      <span className="text-white/60">/month</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-white/10">
-                  <div className="flex items-center gap-2 text-orange-500 mb-4">
-                    <Zap className="w-5 h-5" />
-                    <span className="font-semibold">
-                      {plan.credits} Credits/month
-                    </span>
-                  </div>
-
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm">
-                        <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  onClick={() => handleUpgrade(plan)}
-                  disabled={
-                    loading ||
-                    currentTier === plan.tier ||
-                    plan.tier === 'free'
-                  }
-                  className="w-full accent-button disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              return (
+                <View
+                  key={plan.id}
+                  style={[
+                    styles.planCard,
+                    isHighlighted && styles.planCardHighlighted,
+                    isCurrentPlan && styles.planCardCurrent,
+                  ]}
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : currentTier === plan.tier ? (
-                    'Current Plan'
-                  ) : plan.tier === 'free' ? (
-                    'Free'
-                  ) : (
-                    'Upgrade Now'
+                  {isHighlighted && (
+                    <View style={styles.popularBadge}>
+                      <Zap size={14} color="#000000" />
+                      <Text style={styles.popularText}>MOST POPULAR</Text>
+                    </View>
                   )}
-                </button>
-              </div>
-            ))}
-          </div>
 
-          <div className="glass-card p-4 text-center text-sm text-white/60">
-            <p>Need more credits? Contact support for custom enterprise plans.</p>
-            {isNative && (
-              <p className="mt-2">Payment will be charged to your Apple ID account.</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+                  <View style={styles.planHeader}>
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    <View style={styles.priceContainer}>
+                      <Text style={styles.price}>{plan.price}</Text>
+                      <Text style={styles.priceInterval}>/month</Text>
+                    </View>
+                    <Text style={styles.creditsText}>
+                      {plan.credits} AI Generations
+                    </Text>
+                  </View>
+
+                  <View style={styles.featuresContainer}>
+                    {plan.features.map((feature, index) => (
+                      <View key={index} style={styles.featureRow}>
+                        <Check size={18} color="#30D158" />
+                        <Text style={styles.featureText}>{feature}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.subscribeButton,
+                      isCurrentPlan && styles.subscribeButtonDisabled,
+                      isHighlighted && styles.subscribeButtonHighlighted,
+                    ]}
+                    onPress={() => handlePurchase(plan.id)}
+                    disabled={isCurrentPlan}
+                  >
+                    <Text
+                      style={[
+                        styles.subscribeButtonText,
+                        isCurrentPlan && styles.subscribeButtonTextDisabled,
+                      ]}
+                    >
+                      {isCurrentPlan ? 'Current Plan' : 'Subscribe'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Subscriptions automatically renew unless auto-renew is turned off
+              at least 24 hours before the end of the current period.
+            </Text>
+            <Text style={styles.footerText}>
+              Your account will be charged for renewal within 24 hours prior to
+              the end of the current period.
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 64,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#38383A',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  plansContainer: {
+    paddingVertical: 24,
+  },
+  planCard: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  planCardHighlighted: {
+    borderColor: '#FF9500',
+    backgroundColor: '#1C1C1E',
+  },
+  planCardCurrent: {
+    borderColor: '#30D158',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -12,
+    left: '50%',
+    transform: [{ translateX: -60 }],
+    backgroundColor: '#FF9500',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+  },
+  popularText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  planHeader: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  planName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  price: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  priceInterval: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#8E8E93',
+    marginLeft: 4,
+  },
+  creditsText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#FF9500',
+  },
+  featuresContainer: {
+    marginBottom: 20,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  featureText: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  subscribeButton: {
+    backgroundColor: '#FF9500',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  subscribeButtonHighlighted: {
+    backgroundColor: '#FF9500',
+  },
+  subscribeButtonDisabled: {
+    backgroundColor: '#2C2C2E',
+  },
+  subscribeButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  subscribeButtonTextDisabled: {
+    color: '#8E8E93',
+  },
+  footer: {
+    paddingVertical: 24,
+    paddingHorizontal: 8,
+  },
+  footerText: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+});
