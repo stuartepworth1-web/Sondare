@@ -7,7 +7,8 @@
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build": "expo export --platform web",
     "build:web": "expo export --platform web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "preinstall": "npm config set legacy-peer-deps true"
   },
   "dependencies": {
     "@expo/metro-config": "~0.20.1",
