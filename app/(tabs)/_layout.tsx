@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Code, Lightbulb, Palette, Settings } from 'lucide-react-native';
+import { Code, Lightbulb, Palette, Settings, FolderOpen } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
 
 export default function TabLayout() {
@@ -43,6 +43,15 @@ export default function TabLayout() {
         name="projects"
         options={{
           title: 'Projects',
+          tabBarIcon: ({ size, color }) => (
+            <FolderOpen size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
           tabBarIcon: ({ size, color }) => (
             <Settings size={size} color={color} />
           ),
