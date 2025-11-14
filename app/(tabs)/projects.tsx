@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Folder, Clock, Download, Share, Trash2, CreditCard as Edit3, Play, X } from 'lucide-react-native';
+import { CreditsBar } from '@/components/CreditsBar';
+import { useCredits } from '@/contexts/CreditsContext';
+import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
 
 interface Project {
   id: string;
@@ -21,6 +24,8 @@ interface Project {
 }
 
 export default function ProjectsScreen() {
+  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [projects, setProjects] = useState<Project[]>([
     {
       id: '1',
@@ -80,30 +85,27 @@ export default function ProjectsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#1e3a8a', '#7c3aed']}
-        style={styles.header}
-      >
+      <CreditsBar
+        credits={credits}
+        creditsUsed={creditsUsed}
+        onUpgrade={() => setShowUpgradeModal(true)}
+      />
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>My Projects</Text>
           <Text style={styles.headerSubtitle}>
             Manage and organize your app projects
           </Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.actionsBar}>
         <TouchableOpacity
           style={styles.newProjectButton}
           onPress={() => setShowNewProjectModal(true)}
         >
-          <LinearGradient
-            colors={['#FF9500', '#FF6B00']}
-            style={styles.newProjectButton}
-          >
-            <Plus size={20} color="#ffffff" />
-            <Text style={styles.newProjectButtonText}>New Project</Text>
-          </LinearGradient>
+          <Plus size={20} color="#000000" />
+          <Text style={styles.newProjectButtonText}>New Project</Text>
         </TouchableOpacity>
       </View>
 
@@ -142,33 +144,65 @@ export default function ProjectsScreen() {
               </View>
 
               <View style={styles.projectActions}>
-                <TouchableOpacity style={styles.projectActionButton}>
+                <TouchableOpacity
+                  style={styles.projectActionButton}
+                  onPress={() => Alert.alert('Edit Project', `Opening ${project.name} in editor...`)}
+                >
                   <Edit3 size={16} color="#FF9500" />
                   <Text style={styles.projectActionText}>Edit</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.projectActionButton}>
+
+                <TouchableOpacity
+                  style={styles.projectActionButton}
+                  onPress={() => Alert.alert('Preview', `Launching preview of ${project.name}...`)}
+                >
                   <Play size={16} color="#30D158" />
                   <Text style={styles.projectActionText}>Preview</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.projectActionButton}>
+
+                <TouchableOpacity
+                  style={styles.projectActionButton}
+                  onPress={() => Alert.alert('Exported!', `${project.name} has been exported`)}
+                >
                   <Download size={16} color="#FF9500" />
                   <Text style={styles.projectActionText}>Export</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.projectActionButton}>
+
+                <TouchableOpacity
+                  style={styles.projectActionButton}
+                  onPress={() => Alert.alert('Share', `Share link for ${project.name} copied!`)}
+                >
                   <Share size={16} color="#007AFF" />
                   <Text style={styles.projectActionText}>Share</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.projectActionButtonDanger}>
+
+                <TouchableOpacity
+                  style={styles.projectActionButtonDanger}
+                  onPress={() =>
+                    Alert.alert(
+                      'Delete Project',
+                      `Are you sure you want to delete ${project.name}?`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Delete',
+                          style: 'destructive',
+                          onPress: () => {
+                            setProjects(projects.filter(p => p.id !== project.id));
+                            Alert.alert('Deleted', `${project.name} has been deleted`);
+                          },
+                        },
+                      ]
+                    )
+                  }
+                >
                   <Trash2 size={16} color="#FF453A" />
                 </TouchableOpacity>
               </View>
             </View>
           ))}
         </View>
+        <View style={styles.bottomSpacer} />
       </ScrollView>
 
       <Modal
@@ -216,16 +250,20 @@ export default function ProjectsScreen() {
               style={styles.createButton}
               onPress={createNewProject}
             >
-              <LinearGradient
-                colors={['#FF9500', '#FF6B00']}
-                style={styles.createButton}
-              >
-                <Text style={styles.createButtonText}>Create Project</Text>
-              </LinearGradient>
+              <Text style={styles.createButtonText}>Create Project</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      <UpgradeModalIAP
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={currentTier}
+        onUpgradeSuccess={async () => {
+          await refreshSubscriptionStatus();
+        }}
+      />
     </View>
   );
 }
@@ -289,7 +327,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   projectsSection: {
-    marginTop: 32,
+    marginTop: 24,
     marginBottom: 24,
   },
   sectionTitle: {
@@ -490,5 +528,8 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontFamily: 'System',
     letterSpacing: -0.41,
+  },
+  bottomSpacer: {
+    height: 32,
   },
 });

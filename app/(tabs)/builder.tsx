@@ -6,9 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Code as Code2, Smartphone, Globe, Layers, Play, Download, Copy, Zap } from 'lucide-react-native';
+import { CreditsBar } from '@/components/CreditsBar';
+import { useCredits } from '@/contexts/CreditsContext';
+import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
 
 interface CodeSnippet {
   id: string;
@@ -19,6 +22,8 @@ interface CodeSnippet {
 }
 
 export default function BuilderScreen() {
+  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState('React Native');
   const [prompt, setPrompt] = useState('');
   const [codeSnippets, setCodeSnippets] = useState<CodeSnippet[]>([]);
@@ -70,7 +75,7 @@ export default function LoginScreen() {
 
   const generateCode = async () => {
     setIsGenerating(true);
-    
+
     setTimeout(() => {
       setCodeSnippets(sampleCode);
       setIsGenerating(false);
@@ -79,17 +84,19 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#1e3a8a', '#7c3aed']}
-        style={styles.header}
-      >
+      <CreditsBar
+        credits={credits}
+        creditsUsed={creditsUsed}
+        onUpgrade={() => setShowUpgradeModal(true)}
+      />
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>AI Code Builder</Text>
           <Text style={styles.headerSubtitle}>
             Generate production-ready code instantly
           </Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.frameworkSection}>
@@ -99,7 +106,7 @@ export default function LoginScreen() {
               {frameworks.map((framework) => {
                 const IconComponent = framework.icon;
                 const isSelected = selectedFramework === framework.name;
-                
+
                 return (
                   <TouchableOpacity
                     key={framework.name}
@@ -109,9 +116,9 @@ export default function LoginScreen() {
                     ]}
                     onPress={() => setSelectedFramework(framework.name)}
                   >
-                    <IconComponent 
-                      size={24} 
-                      color={isSelected ? '#FF9500' : '#8E8E93'} 
+                    <IconComponent
+                      size={24}
+                      color={isSelected ? '#FF9500' : '#8E8E93'}
                     />
                     <Text style={[
                       styles.frameworkText,
@@ -139,25 +146,16 @@ export default function LoginScreen() {
               placeholderTextColor="#8E8E93"
             />
           </View>
-          
+
           <TouchableOpacity
             style={styles.generateButton}
             onPress={generateCode}
             disabled={isGenerating}
           >
-            <View style={styles.buttonContent}>
-              {isGenerating ? (
-                <View style={styles.buttonContent}>
-                  <Zap size={20} color="#000000" />
-                  <Text style={styles.generateButtonText}>Generating...</Text>
-                </View>
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Zap size={20} color="#ffffff" />
-                  <Text style={styles.generateButtonText}>Generate Code</Text>
-                </View>
-              )}
-            </View>
+            <Zap size={20} color="#000000" />
+            <Text style={styles.generateButtonText}>
+              {isGenerating ? 'Generating...' : 'Generate Code'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -173,9 +171,9 @@ export default function LoginScreen() {
                   </View>
                   <Text style={styles.codeFramework}>{snippet.framework}</Text>
                 </View>
-                
+
                 <Text style={styles.codeDescription}>{snippet.description}</Text>
-                
+
                 <View style={styles.codeContainer}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <Text style={styles.codeText}>{snippet.code}</Text>
@@ -183,17 +181,26 @@ export default function LoginScreen() {
                 </View>
 
                 <View style={styles.codeActions}>
-                  <TouchableOpacity style={styles.actionButton}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => Alert.alert('Copied!', 'Code copied to clipboard')}
+                  >
                     <Copy size={16} color="#FF9500" />
                     <Text style={styles.actionButtonText}>Copy</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity style={styles.actionButton}>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => Alert.alert('Preview', 'Preview functionality will open a live preview of the component')}
+                  >
                     <Play size={16} color="#30D158" />
                     <Text style={styles.actionButtonText}>Preview</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity style={styles.actionButton}>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => Alert.alert('Exported!', 'Code has been exported to your files')}
+                  >
                     <Download size={16} color="#FF9500" />
                     <Text style={styles.actionButtonText}>Export</Text>
                   </TouchableOpacity>
@@ -202,7 +209,17 @@ export default function LoginScreen() {
             ))}
           </View>
         )}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <UpgradeModalIAP
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={currentTier}
+        onUpgradeSuccess={async () => {
+          await refreshSubscriptionStatus();
+        }}
+      />
     </View>
   );
 }
@@ -241,11 +258,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   frameworkSection: {
-    marginTop: 32,
+    marginTop: 24,
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'System',
@@ -254,11 +271,10 @@ const styles = StyleSheet.create({
   },
   frameworkList: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
   },
   frameworkCard: {
     backgroundColor: '#1C1C1E',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -272,7 +288,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C1C1E',
   },
   frameworkText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
     fontFamily: 'System',
@@ -290,11 +306,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   input: {
     fontSize: 17,
@@ -310,8 +321,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 24,
-  },
-  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -325,18 +334,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   resultsSection: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   codeCard: {
     backgroundColor: '#1C1C1E',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
   },
   codeHeader: {
     flexDirection: 'row',
@@ -350,7 +354,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   codeTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'System',
@@ -358,7 +362,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   codeFramework: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#FF9500',
     fontFamily: 'System',
@@ -369,7 +373,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   codeDescription: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '400',
     color: '#8E8E93',
     fontFamily: 'System',
@@ -385,7 +389,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontFamily: 'Menlo',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '400',
     color: '#FFFFFF',
     letterSpacing: 0,
@@ -394,6 +398,7 @@ const styles = StyleSheet.create({
   codeActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',
@@ -402,15 +407,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: '#2C2C2E',
     borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 8,
   },
   actionButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
     fontFamily: 'System',
     letterSpacing: -0.08,
     marginLeft: 4,
+  },
+  bottomSpacer: {
+    height: 32,
   },
 });

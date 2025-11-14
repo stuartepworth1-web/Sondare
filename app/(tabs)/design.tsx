@@ -5,250 +5,300 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  TextInput,
+  Alert,
 } from 'react-native';
-import { Palette, Layers, Type, LayoutGrid as Layout, Eye, Download } from 'lucide-react-native';
+import {
+  Square,
+  Circle,
+  Type,
+  Image as ImageIcon,
+  Layout,
+  Smartphone,
+  Palette,
+  Layers,
+  Plus,
+  Trash2,
+  Copy,
+  Move,
+} from 'lucide-react-native';
+import { CreditsBar } from '@/components/CreditsBar';
+import { useCredits } from '@/contexts/CreditsContext';
+import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
 
-const { width } = Dimensions.get('window');
-
-interface DesignElement {
+interface CanvasElement {
   id: string;
-  type: 'button' | 'card' | 'header' | 'input';
-  title: string;
-  description: string;
-  colors: string[];
+  type: 'text' | 'button' | 'image' | 'container';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  backgroundColor?: string;
+  text?: string;
+  fontSize?: number;
 }
 
 export default function DesignScreen() {
-  const [selectedCategory, setSelectedCategory] = useState('Components');
+  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [screenType, setScreenType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
 
-  const categories = [
-    { name: 'Components', icon: Layers },
-    { name: 'Colors', icon: Palette },
-    { name: 'Typography', icon: Type },
-    { name: 'Layouts', icon: Layout },
-  ];
+  const screenSizes = {
+    mobile: { width: 320, height: 568, label: 'Mobile (375x812)' },
+    tablet: { width: 400, height: 600, label: 'Tablet (768x1024)' },
+    desktop: { width: 500, height: 400, label: 'Desktop (1920x1080)' },
+  };
 
-  const designElements: DesignElement[] = [
-    {
-      id: '1',
-      type: 'button',
-      title: 'Primary Button',
-      description: 'Modern gradient button with hover effects',
-      colors: ['#7c3aed', '#3b82f6'],
-    },
-    {
-      id: '2',
-      type: 'card',
-      title: 'Feature Card',
-      description: 'Elegant card design with shadow and rounded corners',
-      colors: ['#ffffff', '#f8fafc'],
-    },
-    {
-      id: '3',
-      type: 'header',
-      title: 'App Header',
-      description: 'Clean header with gradient background',
-      colors: ['#1e3a8a', '#7c3aed'],
-    },
-    {
-      id: '4',
-      type: 'input',
-      title: 'Text Input',
-      description: 'Modern input field with focus states',
-      colors: ['#ffffff', '#e2e8f0'],
-    },
-  ];
+  const addElement = (type: 'text' | 'button' | 'image' | 'container') => {
+    const newElement: CanvasElement = {
+      id: Date.now().toString(),
+      type,
+      x: 50,
+      y: 100,
+      width: type === 'button' ? 120 : type === 'text' ? 150 : 200,
+      height: type === 'button' ? 40 : type === 'text' ? 30 : 150,
+      backgroundColor: type === 'button' ? '#FF9500' : type === 'container' ? '#1C1C1E' : 'transparent',
+      text: type === 'text' ? 'Text Label' : type === 'button' ? 'Button' : undefined,
+      fontSize: type === 'text' ? 16 : type === 'button' ? 14 : undefined,
+    };
+    setCanvasElements([...canvasElements, newElement]);
+    setSelectedElement(newElement.id);
+  };
 
-  const colorPalettes = [
-    {
-      name: 'Ocean Blue',
-      colors: ['#000000', '#1C1C1E', '#2C2C2E', '#38383A', '#48484A'],
-    },
-    {
-      name: 'Purple Dreams',
-      colors: ['#FF9500', '#FF9F0A', '#FFAB14', '#FFB71E', '#FFC328'],
-    },
-    {
-      name: 'Forest Green',
-      colors: ['#30D158', '#FF453A', '#007AFF', '#5856D6', '#AF52DE'],
-    },
-    {
-      name: 'Sunset Orange',
-      colors: ['#8E8E93', '#AEAEB2', '#C7C7CC', '#D1D1D6', '#E5E5EA'],
-    },
-  ];
+  const deleteElement = (id: string) => {
+    setCanvasElements(canvasElements.filter(el => el.id !== id));
+    if (selectedElement === id) setSelectedElement(null);
+  };
 
-  const renderComponentPreview = (element: DesignElement) => {
-    switch (element.type) {
-      case 'button':
-        return (
-          <View style={[styles.previewButton, { backgroundColor: element.colors[0] }]}>
-            <Text style={styles.previewButtonText}>Click Me</Text>
-          </View>
-        );
-      case 'card':
-        return (
-          <View style={styles.previewCard}>
-            <View style={styles.previewCardHeader} />
-            <View style={styles.previewCardContent}>
-              <View style={styles.previewCardLine} />
-              <View style={styles.previewCardLineShort} />
-            </View>
-          </View>
-        );
-      case 'header':
-        return (
-          <View style={[styles.previewHeader, { backgroundColor: element.colors[0] }]}>
-            <View style={styles.previewHeaderContent}>
-              <View style={styles.previewHeaderIcon} />
-              <View style={styles.previewHeaderText} />
-            </View>
-          </View>
-        );
-      case 'input':
-        return (
-          <View style={styles.previewInput}>
-            <View style={styles.previewInputText} />
-          </View>
-        );
-      default:
-        return <View style={styles.previewDefault} />;
+  const duplicateElement = (id: string) => {
+    const element = canvasElements.find(el => el.id === id);
+    if (element) {
+      const newElement = {
+        ...element,
+        id: Date.now().toString(),
+        x: element.x + 20,
+        y: element.y + 20,
+      };
+      setCanvasElements([...canvasElements, newElement]);
     }
+  };
+
+  const exportDesign = () => {
+    Alert.alert(
+      'Export Design',
+      'Your design will be exported as:\n\n• React Native code\n• Figma file\n• PNG/SVG assets\n\nChoose your format:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'React Native', onPress: () => Alert.alert('Exported!', 'React Native code copied to clipboard') },
+        { text: 'Figma', onPress: () => Alert.alert('Exported!', 'Design exported to Figma') },
+      ]
+    );
+  };
+
+  const renderCanvasElement = (element: CanvasElement) => {
+    const isSelected = selectedElement === element.id;
+
+    return (
+      <TouchableOpacity
+        key={element.id}
+        style={[
+          styles.canvasElement,
+          {
+            left: element.x,
+            top: element.y,
+            width: element.width,
+            height: element.height,
+            backgroundColor: element.backgroundColor,
+            borderWidth: isSelected ? 2 : 0,
+            borderColor: '#FF9500',
+          },
+        ]}
+        onPress={() => setSelectedElement(element.id)}
+      >
+        {element.type === 'text' && (
+          <Text style={[styles.elementText, { fontSize: element.fontSize }]}>
+            {element.text}
+          </Text>
+        )}
+        {element.type === 'button' && (
+          <Text style={[styles.buttonText, { fontSize: element.fontSize }]}>
+            {element.text}
+          </Text>
+        )}
+        {element.type === 'image' && (
+          <View style={styles.imagePlaceholder}>
+            <ImageIcon size={32} color="#8E8E93" />
+          </View>
+        )}
+        {element.type === 'container' && (
+          <View style={styles.containerPlaceholder}>
+            <Layout size={24} color="#8E8E93" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
     <View style={styles.container}>
+      <CreditsBar
+        credits={credits}
+        creditsUsed={creditsUsed}
+        onUpgrade={() => setShowUpgradeModal(true)}
+      />
+
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Design System</Text>
-          <Text style={styles.headerSubtitle}>
-            Beautiful components and design patterns
-          </Text>
-        </View>
+        <Text style={styles.headerTitle}>App Designer</Text>
+        <Text style={styles.headerSubtitle}>Drag, drop, and design your app</Text>
       </View>
 
-      <View style={styles.categoryTabs}>
+      <View style={styles.toolbar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.tabsList}>
-            {categories.map((category) => {
-              const IconComponent = category.icon;
-              const isSelected = selectedCategory === category.name;
-              
-              return (
-                <TouchableOpacity
-                  key={category.name}
-                  style={[
-                    styles.tab,
-                    isSelected && styles.tabSelected
-                  ]}
-                  onPress={() => setSelectedCategory(category.name)}
-                >
-                  <IconComponent 
-                    size={20} 
-                    color={isSelected ? '#FF9500' : '#8E8E93'} 
-                  />
-                  <Text style={[
-                    styles.tabText,
-                    isSelected && styles.tabTextSelected
-                  ]}>
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <View style={styles.toolbarContent}>
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={() => addElement('text')}
+            >
+              <Type size={20} color="#FF9500" />
+              <Text style={styles.toolButtonText}>Text</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={() => addElement('button')}
+            >
+              <Square size={20} color="#FF9500" />
+              <Text style={styles.toolButtonText}>Button</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={() => addElement('image')}
+            >
+              <ImageIcon size={20} color="#FF9500" />
+              <Text style={styles.toolButtonText}>Image</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={() => addElement('container')}
+            >
+              <Layout size={20} color="#FF9500" />
+              <Text style={styles.toolButtonText}>Container</Text>
+            </TouchableOpacity>
+
+            <View style={styles.toolbarDivider} />
+
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={exportDesign}
+            >
+              <Layers size={20} color="#30D158" />
+              <Text style={styles.toolButtonText}>Export</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {selectedCategory === 'Components' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>UI Components</Text>
-            {designElements.map((element) => (
-              <View key={element.id} style={styles.componentCard}>
-                <View style={styles.componentPreview}>
-                  {renderComponentPreview(element)}
-                </View>
-                
-                <View style={styles.componentInfo}>
-                  <Text style={styles.componentTitle}>{element.title}</Text>
-                  <Text style={styles.componentDescription}>
-                    {element.description}
-                  </Text>
-                  
-                  <View style={styles.componentActions}>
-                    <TouchableOpacity style={styles.actionButton}>
-                      <Eye size={16} color="#FF9500" />
-                      <Text style={styles.actionButtonText}>Preview</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity style={styles.actionButton}>
-                      <Download size={16} color="#30D158" />
-                      <Text style={styles.actionButtonText}>Use</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+      <View style={styles.screenSizeSelector}>
+        {(['mobile', 'tablet', 'desktop'] as const).map((size) => (
+          <TouchableOpacity
+            key={size}
+            style={[
+              styles.sizeButton,
+              screenType === size && styles.sizeButtonActive,
+            ]}
+            onPress={() => setScreenType(size)}
+          >
+            <Smartphone size={16} color={screenType === size ? '#FF9500' : '#8E8E93'} />
+            <Text
+              style={[
+                styles.sizeButtonText,
+                screenType === size && styles.sizeButtonTextActive,
+              ]}
+            >
+              {size.charAt(0).toUpperCase() + size.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {selectedCategory === 'Colors' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Color Palettes</Text>
-            {colorPalettes.map((palette, index) => (
-              <View key={index} style={styles.paletteCard}>
-                <Text style={styles.paletteName}>{palette.name}</Text>
-                <View style={styles.paletteColors}>
-                  {palette.colors.map((color, colorIndex) => (
-                    <View
-                      key={colorIndex}
-                      style={[
-                        styles.colorSwatch,
-                        { backgroundColor: color }
-                      ]}
-                    />
-                  ))}
-                </View>
-                <TouchableOpacity style={styles.usePaletteButton}>
-                  <Text style={styles.usePaletteButtonText}>Use Palette</Text>
-                </TouchableOpacity>
+      <ScrollView style={styles.content}>
+        <View style={styles.canvasContainer}>
+          <View
+            style={[
+              styles.canvas,
+              {
+                width: screenSizes[screenType].width,
+                height: screenSizes[screenType].height,
+              },
+            ]}
+          >
+            {canvasElements.length === 0 ? (
+              <View style={styles.emptyCanvas}>
+                <Plus size={48} color="#38383A" />
+                <Text style={styles.emptyCanvasText}>
+                  Tap tools above to add elements
+                </Text>
               </View>
-            ))}
+            ) : (
+              canvasElements.map(renderCanvasElement)
+            )}
           </View>
-        )}
 
-        {selectedCategory === 'Typography' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Typography Scale</Text>
-            <View style={styles.typographyCard}>
-              <Text style={styles.typographyHeading1}>Heading 1</Text>
-              <Text style={styles.typographyHeading2}>Heading 2</Text>
-              <Text style={styles.typographyHeading3}>Heading 3</Text>
-              <Text style={styles.typographyBody}>Body Text</Text>
-              <Text style={styles.typographyCaption}>Caption</Text>
+          {canvasElements.length > 0 && (
+            <View style={styles.canvasInfo}>
+              <Text style={styles.canvasInfoText}>
+                {screenSizes[screenType].label} • {canvasElements.length} elements
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {selectedElement && (
+          <View style={styles.propertiesPanel}>
+            <Text style={styles.propertiesTitle}>Element Actions</Text>
+            <View style={styles.propertiesActions}>
+              <TouchableOpacity
+                style={styles.propertyButton}
+                onPress={() => duplicateElement(selectedElement)}
+              >
+                <Copy size={18} color="#FF9500" />
+                <Text style={styles.propertyButtonText}>Duplicate</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.propertyButton}
+                onPress={() => Alert.alert('Move', 'Drag functionality will be available in the native app')}
+              >
+                <Move size={18} color="#007AFF" />
+                <Text style={styles.propertyButtonText}>Move</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.propertyButton, styles.propertyButtonDanger]}
+                onPress={() => deleteElement(selectedElement)}
+              >
+                <Trash2 size={18} color="#FF453A" />
+                <Text style={styles.propertyButtonText}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {selectedCategory === 'Layouts' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Layout Templates</Text>
-            <View style={styles.layoutCard}>
-              <Text style={styles.layoutTitle}>Grid Layout</Text>
-              <View style={styles.layoutPreview}>
-                <View style={styles.layoutGrid}>
-                  <View style={styles.layoutGridItem} />
-                  <View style={styles.layoutGridItem} />
-                  <View style={styles.layoutGridItem} />
-                  <View style={styles.layoutGridItem} />
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <UpgradeModalIAP
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={currentTier}
+        onUpgradeSuccess={async () => {
+          await refreshSubscriptionStatus();
+        }}
+      />
     </View>
   );
 }
@@ -259,345 +309,190 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   header: {
-    backgroundColor: '#000000',
-    paddingTop: 64,
-    paddingBottom: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
     paddingHorizontal: 16,
-  },
-  headerContent: {
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.37,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '400',
     color: '#8E8E93',
-    fontFamily: 'System',
-    letterSpacing: -0.41,
-    textAlign: 'center',
   },
-  categoryTabs: {
+  toolbar: {
     backgroundColor: '#1C1C1E',
-    paddingVertical: 16,
+    borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#38383A',
+    borderColor: '#38383A',
+    paddingVertical: 12,
   },
-  tabsList: {
+  toolbarContent: {
     flexDirection: 'row',
     paddingHorizontal: 16,
+    gap: 12,
   },
-  tab: {
+  toolButton: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#2C2C2E',
+    borderRadius: 8,
+    minWidth: 70,
+  },
+  toolButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  toolbarDivider: {
+    width: 1,
+    backgroundColor: '#38383A',
+    marginHorizontal: 8,
+  },
+  screenSizeSelector: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  sizeButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: '#2C2C2E',
-    marginRight: 12,
-  },
-  tabSelected: {
-    backgroundColor: '#38383A',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF9500',
+    borderColor: '#38383A',
+    gap: 6,
   },
-  tabText: {
-    fontSize: 15,
+  sizeButtonActive: {
+    borderColor: '#FF9500',
+    backgroundColor: '#2C2C2E',
+  },
+  sizeButtonText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
-    fontFamily: 'System',
-    letterSpacing: -0.24,
-    marginLeft: 8,
   },
-  tabTextSelected: {
+  sizeButtonTextActive: {
     color: '#FF9500',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
   },
-  section: {
-    marginTop: 32,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.35,
-    marginBottom: 16,
-  },
-  componentCard: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  componentPreview: {
+  canvasContainer: {
     alignItems: 'center',
     paddingVertical: 24,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 10,
-    marginBottom: 16,
   },
-  previewButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  previewButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: 'System',
-    letterSpacing: -0.41,
-  },
-  previewCard: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 8,
-    padding: 16,
-    width: 120,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  previewCardHeader: {
-    height: 8,
-    backgroundColor: '#FF9500',
-    borderRadius: 4,
-    marginBottom: 12,
-  },
-  previewCardContent: {
-    gap: 8,
-  },
-  previewCardLine: {
-    height: 4,
-    backgroundColor: '#38383A',
-    borderRadius: 2,
-  },
-  previewCardLineShort: {
-    height: 4,
-    backgroundColor: '#38383A',
-    borderRadius: 2,
-    width: '60%',
-  },
-  previewHeader: {
-    width: 160,
-    height: 40,
-    borderRadius: 8,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  previewHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  previewHeaderIcon: {
-    width: 16,
-    height: 16,
-    backgroundColor: '#FF9500',
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  previewHeaderText: {
-    height: 8,
+  canvas: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 4,
+    borderRadius: 12,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  emptyCanvas: {
     flex: 1,
-  },
-  previewInput: {
-    width: 140,
-    height: 40,
-    backgroundColor: '#1C1C1E',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#38383A',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  previewInputText: {
-    height: 4,
-    backgroundColor: '#8E8E93',
-    borderRadius: 2,
-    width: '80%',
-  },
-  previewDefault: {
-    width: 80,
-    height: 60,
-    backgroundColor: '#38383A',
-    borderRadius: 8,
-  },
-  componentInfo: {
-    alignItems: 'center',
-  },
-  componentTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.38,
-    marginBottom: 4,
-  },
-  componentDescription: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: '#8E8E93',
-    fontFamily: 'System',
-    letterSpacing: -0.24,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  componentActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 8,
-  },
-  actionButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8E8E93',
-    fontFamily: 'System',
-    letterSpacing: -0.08,
-    marginLeft: 4,
-  },
-  paletteCard: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  paletteName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.38,
-    marginBottom: 16,
-  },
-  paletteColors: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  colorSwatch: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#38383A',
-  },
-  usePaletteButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#FF9500',
+  },
+  emptyCanvasText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#8E8E93',
+    marginTop: 12,
+  },
+  canvasElement: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 8,
   },
-  usePaletteButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
+  elementText: {
     color: '#000000',
-    fontFamily: 'System',
-    letterSpacing: -0.24,
+    fontWeight: '500',
   },
-  typographyCard: {
+  buttonText: {
+    color: '#000000',
+    fontWeight: '600',
+  },
+  imagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+  },
+  containerPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+  },
+  canvasInfo: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: '#1C1C1E',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    borderRadius: 8,
   },
-  typographyHeading1: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.37,
-    marginBottom: 16,
-  },
-  typographyHeading2: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.35,
-    marginBottom: 12,
-  },
-  typographyHeading3: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.38,
-    marginBottom: 12,
-  },
-  typographyBody: {
-    fontSize: 17,
-    fontWeight: '400',
-    color: '#8E8E93',
-    fontFamily: 'System',
-    letterSpacing: -0.41,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  typographyCaption: {
+  canvasInfoText: {
     fontSize: 13,
-    fontWeight: '400',
+    fontWeight: '500',
     color: '#8E8E93',
-    fontFamily: 'System',
-    letterSpacing: -0.08,
+    textAlign: 'center',
   },
-  layoutCard: {
+  propertiesPanel: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    padding: 16,
     backgroundColor: '#1C1C1E',
     borderRadius: 12,
-    padding: 16,
   },
-  layoutTitle: {
-    fontSize: 20,
+  propertiesTitle: {
+    fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
-    fontFamily: 'System',
-    letterSpacing: 0.38,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  layoutPreview: {
-    backgroundColor: '#2C2C2E',
-    borderRadius: 10,
-    padding: 16,
-  },
-  layoutGrid: {
+  propertiesActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  layoutGridItem: {
-    width: (width - 120) / 2 - 4,
-    height: 60,
-    backgroundColor: '#38383A',
+  propertyButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#2C2C2E',
     borderRadius: 8,
+    gap: 6,
+  },
+  propertyButtonDanger: {
+    backgroundColor: '#2C2C2E',
+  },
+  propertyButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  bottomSpacer: {
+    height: 32,
   },
 });

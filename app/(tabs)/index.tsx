@@ -9,6 +9,9 @@ import {
   Animated,
 } from 'react-native';
 import { Send, Zap, Target, Smartphone } from 'lucide-react-native';
+import { CreditsBar } from '@/components/CreditsBar';
+import { useCredits } from '@/contexts/CreditsContext';
+import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
 
 interface AppIdea {
   id: string;
@@ -20,6 +23,8 @@ interface AppIdea {
 }
 
 export default function IdeasScreen() {
+  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [ideas, setIdeas] = useState<AppIdea[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -79,6 +84,11 @@ export default function IdeasScreen() {
 
   return (
     <View style={styles.container}>
+      <CreditsBar
+        credits={credits}
+        creditsUsed={creditsUsed}
+        onUpgrade={() => setShowUpgradeModal(true)}
+      />
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>AI App Ideas</Text>
@@ -153,7 +163,17 @@ export default function IdeasScreen() {
             ))}
           </Animated.View>
         )}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <UpgradeModalIAP
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={currentTier}
+        onUpgradeSuccess={async () => {
+          await refreshSubscriptionStatus();
+        }}
+      />
     </View>
   );
 }
@@ -342,5 +362,8 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontFamily: 'System',
     letterSpacing: -0.24,
+  },
+  bottomSpacer: {
+    height: 32,
   },
 });
