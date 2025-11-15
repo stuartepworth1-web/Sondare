@@ -14,9 +14,9 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.sondare.app"
         APP_STORE_APPLE_ID: 6754073121
-        VITE_SUPABASE_URL: "https://wzqjcrzfypxihnxokbwt.supabase.co"
-        VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6cWpjcnpmeXB4aWhueG9rYnd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1Mjc5NDIsImV4cCI6MjA3NjEwMzk0Mn0.0CVu1LukIlx7LpM4xDvTSxLaZ06vsOiISwaaaiB_PAg"
-        VITE_REVENUECAT_IOS_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
+        EXPO_PUBLIC_SUPABASE_URL: "https://qplimwowezrqupzxkuio.supabase.co"
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
+        EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
       node: 20
     scripts:
       - name: Install dependencies
@@ -29,9 +29,9 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/ios --legacy-peer-deps
       - name: Create .env file
         script: |
-          echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" > .env
-          echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env
-          echo "VITE_REVENUECAT_IOS_KEY=$VITE_REVENUECAT_IOS_KEY" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
+          echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
       - name: Build web app
         script: |
           npm run build
@@ -89,12 +89,20 @@ workflows:
         - google_play
       vars:
         PACKAGE_NAME: "com.sondare.app"
+        EXPO_PUBLIC_SUPABASE_URL: "https://qplimwowezrqupzxkuio.supabase.co"
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
+        EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
       node: 20
     scripts:
       - name: Install dependencies
         script: |
           rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps
+      - name: Create .env file
+        script: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
+          echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
       - name: Build web app
         script: |
           npm run build
@@ -128,4 +136,3 @@ workflows:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: internal
         submit_as_draft: true
-
