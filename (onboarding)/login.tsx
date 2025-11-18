@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,14 +14,58 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import * as SecureStore from 'expo-secure-store';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  const loadSavedCredentials = async () => {
+    if (Platform.OS === 'web') return;
+
+    try {
+      const savedEmail = await SecureStore.getItemAsync('saved_email');
+      const savedPassword = await SecureStore.getItemAsync('saved_password');
+      const savedRemember = await SecureStore.getItemAsync('remember_me');
+
+      if (savedRemember === 'true' && savedEmail) {
+        setEmail(savedEmail);
+        if (savedPassword) {
+          setPassword(savedPassword);
+        }
+        setRememberMe(true);
+      }
+    } catch (e) {
+      console.log('Error loading saved credentials:', e);
+    }
+  };
+
+  const saveCredentials = async () => {
+    if (Platform.OS === 'web') return;
+
+    try {
+      if (rememberMe) {
+        await SecureStore.setItemAsync('saved_email', email);
+        await SecureStore.setItemAsync('saved_password', password);
+        await SecureStore.setItemAsync('remember_me', 'true');
+      } else {
+        await SecureStore.deleteItemAsync('saved_email');
+        await SecureStore.deleteItemAsync('saved_password');
+        await SecureStore.deleteItemAsync('remember_me');
+      }
+    } catch (e) {
+      console.log('Error saving credentials:', e);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -50,6 +94,7 @@ export default function LoginScreen() {
       }
 
       if (data.session) {
+        await saveCredentials();
         router.replace('/(tabs)');
       }
     } catch (err) {
@@ -130,9 +175,21 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+            <View style={styles.optionsRow}>
+              <TouchableOpacity
+                style={styles.rememberMeContainer}
+                onPress={() => setRememberMe(!rememberMe)}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  {rememberMe && <View style={styles.checkboxInner} />}
+                </View>
+                <Text style={styles.rememberMeText}>Remember me</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
@@ -237,10 +294,44 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 4,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
+  optionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#8E8E93',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    borderColor: '#FF9500',
+    backgroundColor: '#FF9500',
+  },
+  checkboxInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  rememberMeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    fontFamily: 'System',
+  },
+  forgotPassword: {},
+
   forgotPasswordText: {
     fontSize: 14,
     fontWeight: '600',

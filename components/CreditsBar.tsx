@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Zap } from 'lucide-react-native';
 
 interface CreditsBarProps {
@@ -11,9 +12,10 @@ interface CreditsBarProps {
 export function CreditsBar({ credits, creditsUsed, onUpgrade }: CreditsBarProps) {
   const creditsRemaining = credits - creditsUsed;
   const creditsPercentage = (creditsRemaining / credits) * 100;
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         <View style={styles.leftSection}>
           <Zap size={18} color="#FF9500" fill="#FF9500" />
