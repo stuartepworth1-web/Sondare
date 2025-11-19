@@ -10,63 +10,58 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.sondare.app
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
-        XCODE_SCHEME: "App"
         BUNDLE_ID: "com.sondare.app"
         APP_STORE_APPLE_ID: 6754073121
         EXPO_PUBLIC_SUPABASE_URL: "https://qplimwowezrqupzxkuio.supabase.co"
         EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
         EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
       node: 20
+      xcode: 15.4
     scripts:
       - name: Install dependencies
         script: |
-          rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps
 
-      - name: Install Capacitor
+      - name: Install Expo CLI
         script: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios --legacy-peer-deps
+          npm install -g expo-cli @expo/ngrok
+
       - name: Create .env file
         script: |
           echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
           echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
-      - name: Build web app
+
+      - name: Prebuild iOS project
         script: |
-          npm run build
-      - name: Clean iOS web assets
-        script: |
-          rm -rf ios/App/App/public
-      - name: Sync Capacitor and configure iOS
-        script: |
-          npx cap sync ios
-          if [ -f ios/App/Podfile ]; then
-            sed -i '' "s/platform :ios, '[0-9]*\.[0-9]*'/platform :ios, '14.0'/g" ios/App/Podfile || echo "platform :ios, '14.0'" > ios/App/Podfile.tmp && cat ios/App/Podfile >> ios/App/Podfile.tmp && mv ios/App/Podfile.tmp ios/App/Podfile
-            sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
-            cd ios/App
-            pod repo update
-            pod install --repo-update
-          fi
-      - name: Set up code signing settings on Xcode project
+          npx expo prebuild --platform ios --clean
+
+      - name: Set up code signing
         script: |
           xcode-project use-profiles
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+
       - name: Increment build number
         script: |
-          cd ios/App
+          cd ios
           NEW_BUILD_NUMBER=$(($(date +%s) / 60))
-          echo "Setting build number to: $NEW_BUILD_NUMBER (timestamp-based)"
+          echo "Setting build number to: $NEW_BUILD_NUMBER"
           agvtool new-version -all $NEW_BUILD_NUMBER
-      - name: Build ipa for distribution
+
+      - name: Build iOS app
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --workspace "ios/sondare.xcworkspace" \
+            --scheme "sondare"
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
     publishing:
       email:
         recipients:
@@ -80,61 +75,3 @@ workflows:
         beta_groups:
           - App Store Connect Users
         submit_to_app_store: false
-  android-workflow:
-    name: Android Workflow
-    max_build_duration: 120
-    instance_type: mac_mini_m1
-    environment:
-      android_signing:
-        - keystore_reference
-      groups:
-        - google_play
-      vars:
-        PACKAGE_NAME: "com.sondare.app"
-        EXPO_PUBLIC_SUPABASE_URL: "https://qplimwowezrqupzxkuio.supabase.co"
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
-        EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
-      node: 20
-    scripts:
-      - name: Install dependencies
-        script: |
-          rm -rf node_modules package-lock.json
-          npm install --legacy-peer-deps
-      - name: Create .env file
-        script: |
-          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
-          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
-          echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
-      - name: Build web app
-        script: |
-          npm run build
-      - name: Install Capacitor
-        script: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
-      - name: Add Android platform
-        script: |
-          npx cap add android
-      - name: Update dependencies and copy web assets to native project
-        script: |
-          npx cap sync android
-      - name: Set up local.properties
-        script: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-      - name: Build Android release
-        script: |
-          cd android
-          ./gradlew bundleRelease
-    artifacts:
-      - android/app/build/outputs/**/*.aab
-      - android/app/build/outputs/**/*.apk
-    publishing:
-      email:
-        recipients:
-          - stuart@sondare.me
-        notify:
-          success: true
-          failure: true
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        submit_as_draft: true
