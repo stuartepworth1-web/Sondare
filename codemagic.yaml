@@ -43,7 +43,8 @@ workflows:
       - name: Install CocoaPods dependencies
         script: |
           cd ios
-          pod install
+          pod repo update
+          pod install --repo-update
 
       - name: Increment build number
         script: |
