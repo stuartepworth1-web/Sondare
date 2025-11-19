@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Zap, CreditCard, User, Bell, Info, RotateCcw } from 'lucide-react-native';
+import { Zap, CreditCard, User, Bell, Info, RotateCcw, FileText, Shield } from 'lucide-react-native';
 import { restorePurchases } from '@/lib/revenuecat';
 import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
 import { CreditsBar } from '@/components/CreditsBar';
@@ -54,7 +54,7 @@ export default function SettingsScreen() {
 
   return (
     <LinearGradient
-      colors={['#1C1C1E', '#000000']}
+      colors={['#010202', '#101623']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
@@ -156,6 +156,33 @@ export default function SettingsScreen() {
                 <Bell size={20} color="#FF9500" />
               </View>
               <Text style={styles.settingItemText}>Notifications</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push('/(tabs)/settings/terms')}
+          >
+            <View style={styles.settingItemLeft}>
+              <View style={styles.settingIcon}>
+                <FileText size={20} color="#FF9500" />
+              </View>
+              <Text style={styles.settingItemText}>Terms of Use</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push('/(tabs)/settings/privacy')}
+          >
+            <View style={styles.settingItemLeft}>
+              <View style={styles.settingIcon}>
+                <Shield size={20} color="#FF9500" />
+              </View>
+              <Text style={styles.settingItemText}>Privacy Policy</Text>
             </View>
           </TouchableOpacity>
         </View>

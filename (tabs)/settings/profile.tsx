@@ -7,10 +7,12 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
-import { ChevronLeft, Camera, Save } from 'lucide-react-native';
+import { ChevronLeft, Camera, Save, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileSettings() {
   const [name, setName] = useState('John Doe');
@@ -33,6 +35,43 @@ export default function ProfileSettings() {
 
   const handleSave = () => {
     router.back();
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone. All your data, projects, and subscription will be permanently deleted.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) throw error;
+
+              Alert.alert(
+                'Account Deletion Requested',
+                'Your account deletion request has been submitted. All data will be permanently removed within 30 days.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => router.replace('/(onboarding)/welcome'),
+                  },
+                ]
+              );
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again or contact support.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -103,6 +142,17 @@ export default function ProfileSettings() {
             <Save size={20} color="#000000" />
             <Text style={styles.saveButtonText}>Save Changes</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+            <Trash2 size={20} color="#FF3B30" />
+            <Text style={styles.deleteButtonText}>Delete Account</Text>
+          </TouchableOpacity>
+          <Text style={styles.deleteWarning}>
+            This action cannot be undone. All your data will be permanently removed.
+          </Text>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -222,6 +272,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
     marginLeft: 8,
+  },
+  dangerZone: {
+    padding: 16,
+    marginTop: 32,
+    borderTopWidth: 0.5,
+    borderTopColor: '#38383A',
+  },
+  dangerZoneTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginBottom: 16,
+  },
+  deleteButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#FF3B30',
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  deleteButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginLeft: 8,
+  },
+  deleteWarning: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   bottomSpacer: {
     height: 32,

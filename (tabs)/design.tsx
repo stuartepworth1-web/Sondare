@@ -811,7 +811,7 @@ export default function DesignScreen() {
 
   return (
     <LinearGradient
-      colors={['#1C1C1E', '#000000']}
+      colors={['#010202', '#101623']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
