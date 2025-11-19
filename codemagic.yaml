@@ -40,9 +40,7 @@ workflows:
         script: |
           cd ios
           if ! grep -q "ReactAppDependencyProvider" Podfile; then
-            sed -i '' "/use_react_native!/a\\
-\\  pod 'ReactAppDependencyProvider', :path => \"../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios\"
-" Podfile
+            echo "  pod 'ReactAppDependencyProvider', :path => '../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios'" >> Podfile
           fi
 
       - name: Set up code signing
