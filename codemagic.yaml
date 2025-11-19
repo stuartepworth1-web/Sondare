@@ -16,7 +16,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
         EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
       node: 20
-      xcode: 15.4
+      xcode: latest
     scripts:
       - name: Install dependencies
         script: |
