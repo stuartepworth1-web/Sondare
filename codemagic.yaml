@@ -46,25 +46,28 @@ workflows:
           pod repo update
           pod install --repo-update
           cd ..
-          ls -la ios/ | grep -i ".xc"
-          if [ ! -d "ios/Sondare.xcworkspace" ]; then
-            echo "ERROR: Sondare.xcworkspace was not created"
+          WORKSPACE=$(find ios -name "*.xcworkspace" -type d | head -1)
+          if [ -z "$WORKSPACE" ]; then
+            echo "ERROR: No workspace was created"
             exit 1
           fi
-          echo "Workspace created successfully"
+          echo "Workspace created: $WORKSPACE"
+          echo "WORKSPACE_PATH=$WORKSPACE" >> $CM_ENV
 
       - name: Increment build number
         script: |
-          cd ios
+          XCODEPROJ=$(find ios -name "*.xcodeproj" -type d | head -1)
+          cd "$XCODEPROJ/.."
           NEW_BUILD_NUMBER=$(($(date +%s) / 60))
           echo "Setting build number to: $NEW_BUILD_NUMBER"
           agvtool new-version -all $NEW_BUILD_NUMBER
 
       - name: Build iOS app
         script: |
+          WORKSPACE_NAME=$(basename "$WORKSPACE_PATH" .xcworkspace)
           xcode-project build-ipa \
-            --workspace "ios/Sondare.xcworkspace" \
-            --scheme "Sondare"
+            --workspace "$WORKSPACE_PATH" \
+            --scheme "$WORKSPACE_NAME"
 
     artifacts:
       - build/ios/ipa/*.ipa
