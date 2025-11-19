@@ -36,13 +36,6 @@ workflows:
         script: |
           npx expo prebuild --platform ios --clean
 
-      - name: Fix Podfile for React Native 0.76
-        script: |
-          cd ios
-          if ! grep -q "ReactAppDependencyProvider" Podfile; then
-            echo "  pod 'ReactAppDependencyProvider', :path => '../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios'" >> Podfile
-          fi
-
       - name: Set up code signing
         script: |
           xcode-project use-profiles
