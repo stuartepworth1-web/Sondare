@@ -45,6 +45,13 @@ workflows:
           cd ios
           pod repo update
           pod install --repo-update
+          cd ..
+          ls -la ios/ | grep -i ".xc"
+          if [ ! -d "ios/Sondare.xcworkspace" ]; then
+            echo "ERROR: Sondare.xcworkspace was not created"
+            exit 1
+          fi
+          echo "Workspace created successfully"
 
       - name: Increment build number
         script: |
