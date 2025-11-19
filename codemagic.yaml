@@ -44,7 +44,9 @@ workflows:
           if [ -f ios/App/Podfile ]; then
             sed -i '' "s/platform :ios, '[0-9]*\.[0-9]*'/platform :ios, '14.0'/g" ios/App/Podfile || echo "platform :ios, '14.0'" > ios/App/Podfile.tmp && cat ios/App/Podfile >> ios/App/Podfile.tmp && mv ios/App/Podfile.tmp ios/App/Podfile
             sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
-            cd ios/App && pod install
+            cd ios/App
+            pod repo update
+            pod install --repo-update
           fi
       - name: Set up code signing settings on Xcode project
         script: |

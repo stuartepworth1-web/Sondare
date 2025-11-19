@@ -9,11 +9,13 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Zap, CreditCard, User, Bell, Info, RotateCcw } from 'lucide-react-native';
 import { restorePurchases } from '@/lib/revenuecat';
 import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
 import { CreditsBar } from '@/components/CreditsBar';
 import { useCredits } from '@/contexts/CreditsContext';
+import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
@@ -33,11 +35,6 @@ export default function SettingsScreen() {
   const creditsPercentage = (creditsRemaining / credits) * 100;
 
   const handleRestorePurchases = async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert('Not Available', 'Purchase restoration is only available on iOS and Android devices.');
-      return;
-    }
-
     setIsRestoring(true);
     try {
       const customerInfo = await restorePurchases();
@@ -56,7 +53,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#1C1C1E', '#000000']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}
+    >
       <CreditsBar
         credits={credits}
         creditsUsed={creditsUsed}
@@ -135,7 +137,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Account</Text>
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => Alert.alert('Profile Settings', 'Edit your profile information, avatar, and preferences.')}
+            onPress={() => router.push('/(tabs)/settings/profile')}
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
@@ -147,7 +149,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => Alert.alert('Notifications', 'Manage your notification preferences and settings.')}
+            onPress={() => router.push('/(tabs)/settings/notifications')}
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
@@ -162,7 +164,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>About</Text>
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => Alert.alert('App Information', 'Version: 1.0.0\n\nThis app helps you build amazing mobile applications with AI-powered tools.')}
+            onPress={() => router.push('/(tabs)/settings/info')}
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
@@ -184,7 +186,7 @@ export default function SettingsScreen() {
           await refreshSubscriptionStatus();
         }}
       />
-    </View>
+    </LinearGradient>
   );
 }
 

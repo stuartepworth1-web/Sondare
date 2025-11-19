@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Code as Code2, Smartphone, Globe, Layers, Play, Download, Copy, Zap } from 'lucide-react-native';
 import { CreditsBar } from '@/components/CreditsBar';
 import { useCredits } from '@/contexts/CreditsContext';
@@ -83,7 +84,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#1C1C1E', '#000000']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}
+    >
       <CreditsBar
         credits={credits}
         creditsUsed={creditsUsed}
@@ -220,7 +226,7 @@ export default function LoginScreen() {
           await refreshSubscriptionStatus();
         }}
       />
-    </View>
+    </LinearGradient>
   );
 }
 

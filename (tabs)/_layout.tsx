@@ -66,6 +66,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="settings/profile"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="settings/notifications"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="settings/info"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

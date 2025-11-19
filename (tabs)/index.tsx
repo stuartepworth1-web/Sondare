@@ -8,10 +8,12 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Send, Zap, Target, Smartphone } from 'lucide-react-native';
 import { CreditsBar } from '@/components/CreditsBar';
 import { useCredits } from '@/contexts/CreditsContext';
 import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
+import { router } from 'expo-router';
 
 interface AppIdea {
   id: string;
@@ -83,7 +85,12 @@ export default function IdeasScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#1C1C1E', '#000000']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}
+    >
       <CreditsBar
         credits={credits}
         creditsUsed={creditsUsed}
@@ -156,7 +163,10 @@ export default function IdeasScreen() {
                     </View>
                   ))}
                 </View>
-                <TouchableOpacity style={styles.buildButton}>
+                <TouchableOpacity
+                  style={styles.buildButton}
+                  onPress={() => router.push('/(tabs)/design')}
+                >
                   <Text style={styles.buildButtonText}>Start Building</Text>
                 </TouchableOpacity>
               </View>
@@ -174,7 +184,7 @@ export default function IdeasScreen() {
           await refreshSubscriptionStatus();
         }}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
