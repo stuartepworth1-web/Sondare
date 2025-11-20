@@ -360,6 +360,45 @@ const presetDesigns: PresetDesign[] = [
   },
 ];
 
+function DraggableElement({ element, isSelected, onDrag, onDragEnd, children }: {
+  element: CanvasElement;
+  isSelected: boolean;
+  onDrag: (newX: number, newY: number) => void;
+  onDragEnd: () => void;
+  children: React.ReactNode;
+}) {
+  const startPos = useRef({ x: 0, y: 0, elementX: 0, elementY: 0 });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => isSelected,
+      onMoveShouldSetPanResponder: () => isSelected,
+      onPanResponderGrant: (e, gestureState) => {
+        startPos.current = {
+          x: gestureState.x0,
+          y: gestureState.y0,
+          elementX: element.x,
+          elementY: element.y,
+        };
+      },
+      onPanResponderMove: (e, gestureState) => {
+        const newX = startPos.current.elementX + gestureState.dx;
+        const newY = startPos.current.elementY + gestureState.dy;
+        onDrag(newX, newY);
+      },
+      onPanResponderRelease: () => {
+        onDragEnd();
+      },
+    })
+  ).current;
+
+  return (
+    <View {...panResponder.panHandlers} style={{ flex: 1, width: '100%', height: '100%' }}>
+      {children}
+    </View>
+  );
+}
+
 function ResizeHandle({ corner, element, onResize, screenType, screenSizes, snapToGridValue }: {
   corner: 'nw' | 'ne' | 'sw' | 'se';
   element: CanvasElement;
@@ -598,6 +637,19 @@ export default function DesignScreen() {
 
     const newElements = canvasElements.map(el =>
       el.id === id ? { ...el, x: newX, y: newY } : el
+    );
+    setCanvasElements(newElements);
+  };
+
+  const handleElementDrag = (id: string, newX: number, newY: number) => {
+    const element = canvasElements.find(el => el.id === id);
+    if (!element) return;
+
+    const clampedX = snapToGridValue(Math.max(0, Math.min(newX, screenSizes[screenType].width - element.width)));
+    const clampedY = snapToGridValue(Math.max(0, Math.min(newY, screenSizes[screenType].height - element.height)));
+
+    const newElements = canvasElements.map(el =>
+      el.id === id ? { ...el, x: clampedX, y: clampedY } : el
     );
     setCanvasElements(newElements);
   };
@@ -1091,7 +1143,13 @@ export default function DesignScreen() {
                       },
                     ]}
                   >
-                    {element.type === 'text' && (
+                    <DraggableElement
+                      element={element}
+                      isSelected={isSelected}
+                      onDrag={(newX, newY) => handleElementDrag(element.id, newX, newY)}
+                      onDragEnd={() => saveToHistory(canvasElements)}
+                    >
+                      {element.type === 'text' && (
                       <Text
                         style={[
                           styles.elementText,
@@ -1150,6 +1208,7 @@ export default function DesignScreen() {
                         <Layout size={24} color="#8E8E93" />
                       </View>
                     )}
+                    </DraggableElement>
 
                     {isSelected && (
                       <View style={styles.arrowControls}>
@@ -1314,14 +1373,14 @@ export default function DesignScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.layerButton}
-                  onPress={() => bringForward(selectedElement)}
+                  onPress={() => moveElementUp(selectedElement)}
                 >
                   <ChevronUp size={18} color="#FFFFFF" />
                   <Text style={styles.layerButtonText}>Forward</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.layerButton}
-                  onPress={() => sendBackward(selectedElement)}
+                  onPress={() => moveElementDown(selectedElement)}
                 >
                   <ChevronDown size={18} color="#FFFFFF" />
                   <Text style={styles.layerButtonText}>Backward</Text>
