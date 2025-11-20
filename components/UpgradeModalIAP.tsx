@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { X, Zap, Check, CheckCircle } from 'lucide-react-native';
 import { getOfferings, purchasePackage } from '@/lib/revenuecat';
+import { router } from 'expo-router';
 
 interface UpgradeModalIAPProps {
   visible: boolean;
@@ -100,32 +101,42 @@ export function UpgradeModalIAP({
     try {
       const currentOffering = await getOfferings();
 
-      if (currentOffering) {
-        setOffering(currentOffering);
+      const allPlanIdentifiers = ['starter', 'pro', 'entrepreneur'];
+      const availablePlans: PlanDisplay[] = [];
 
-        const availablePlans: PlanDisplay[] = currentOffering.availablePackages
-          .map((pkg: any) => {
-            const identifier = pkg.identifier;
-            const displayInfo = planDisplayInfo[identifier];
+      for (const planId of allPlanIdentifiers) {
+        const displayInfo = planDisplayInfo[planId];
+        if (!displayInfo) continue;
 
-            if (!displayInfo) return null;
+        let price = '$4.99';
+        if (planId === 'pro') price = '$9.99';
+        if (planId === 'entrepreneur') price = '$29.99';
 
-            return {
-              identifier,
-              name: displayInfo.name,
-              price: pkg.product.priceString,
-              credits: displayInfo.credits,
-              features: displayInfo.features,
-              highlighted: displayInfo.highlighted,
-            };
-          })
-          .filter((plan): plan is PlanDisplay => plan !== null);
+        const pkg = currentOffering?.availablePackages?.find((p: any) => p.identifier === planId);
+        if (pkg) {
+          price = pkg.product.priceString;
+        }
 
-        setPlans(availablePlans);
+        availablePlans.push({
+          identifier: planId,
+          name: displayInfo.name,
+          price,
+          credits: displayInfo.credits,
+          features: displayInfo.features,
+          highlighted: displayInfo.highlighted,
+        });
       }
+
+      setOffering(currentOffering);
+      setPlans(availablePlans);
     } catch (error) {
       console.error('Error loading offerings:', error);
-      Alert.alert('Error', 'Failed to load subscription plans. Please try again.');
+      const fallbackPlans: PlanDisplay[] = [
+        { identifier: 'starter', price: '$4.99', ...planDisplayInfo.starter },
+        { identifier: 'pro', price: '$9.99', ...planDisplayInfo.pro },
+        { identifier: 'entrepreneur', price: '$29.99', ...planDisplayInfo.entrepreneur },
+      ];
+      setPlans(fallbackPlans);
     } finally {
       setIsLoadingOfferings(false);
     }
@@ -301,7 +312,7 @@ export function UpgradeModalIAP({
                   <Text style={styles.demoText}>WEB PREVIEW</Text>
                 </View>
                 <Text style={styles.footerText}>
-                  This is a web preview. On iOS/Android devices, tapping Subscribe will open the App Store payment sheet.
+                  This is a web preview. On iOS devices, tapping Subscribe will open the App Store payment sheet.
                 </Text>
               </>
             )}
@@ -313,6 +324,18 @@ export function UpgradeModalIAP({
                 <Text style={styles.footerText}>
                   Your account will be charged for renewal within 24 hours prior to the end of the current period.
                 </Text>
+                <Text style={styles.footerText}>
+                  Payment will be charged to iTunes Account at confirmation of purchase.
+                </Text>
+                <View style={styles.linksContainer}>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/settings/terms')}>
+                    <Text style={styles.linkText}>Terms of Use</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.linkSeparator}>•</Text>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/settings/privacy')}>
+                    <Text style={styles.linkText}>Privacy Policy</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -512,5 +535,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 8,
+  },
+  linksContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    gap: 12,
+  },
+  linkText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+  },
+  linkSeparator: {
+    fontSize: 13,
+    color: '#8E8E93',
   },
 });
