@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sondare.app",
-      "buildNumber": "1",
+      "buildNumber": "29392625",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to scan and capture property details for surveys."
       }
