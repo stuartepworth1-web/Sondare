@@ -46,7 +46,7 @@ workflows:
           pod repo update
           pod install --repo-update
           cd ..
-          WORKSPACE=$(find ios -name "*.xcworkspace" -type d | head -1)
+          WORKSPACE=$(find ios -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
           if [ -z "$WORKSPACE" ]; then
             echo "ERROR: No workspace was created"
             exit 1
