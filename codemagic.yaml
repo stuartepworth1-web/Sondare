@@ -40,9 +40,9 @@ workflows:
         script: |
           npx expo prebuild --platform ios
 
-      - name: Set up code signing
+      - name: Set up code signing settings on Xcode project
         script: |
-          xcode-project use-profiles
+          xcode-project use-profiles --warn-only
 
       - name: Install CocoaPods dependencies
         script: |
@@ -68,10 +68,11 @@ workflows:
 
       - name: Build iOS app
         script: |
-          WORKSPACE_NAME=$(basename "$WORKSPACE_PATH" .xcworkspace)
+          SCHEME=$(basename "$WORKSPACE_PATH" .xcworkspace)
+          echo "Building workspace: $WORKSPACE_PATH with scheme: $SCHEME"
           xcode-project build-ipa \
             --workspace "$WORKSPACE_PATH" \
-            --scheme "$WORKSPACE_NAME"
+            --scheme "$SCHEME"
 
     artifacts:
       - build/ios/ipa/*.ipa
