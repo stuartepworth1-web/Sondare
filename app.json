@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sondare.app"
+      "bundleIdentifier": "com.sondare.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to scan and capture property details for surveys."
+      }
     },
     "android": {
       "package": "com.sondare.app",
