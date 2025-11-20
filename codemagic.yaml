@@ -32,13 +32,20 @@ workflows:
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
           echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
 
+      - name: Remove existing iOS folder
+        script: |
+          rm -rf ios
+
       - name: Prebuild iOS project
         script: |
-          npx expo prebuild --platform ios --clean
+          npx expo prebuild --platform ios
 
       - name: Set up code signing
         script: |
-          xcode-project use-profiles
+          XCODEPROJ=$(find ios -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
+          PROJECT_NAME=$(basename "$XCODEPROJ" .xcodeproj)
+          echo "Configuring signing for project: $PROJECT_NAME"
+          xcode-project use-profiles --project "$XCODEPROJ" --target "$PROJECT_NAME"
 
       - name: Install CocoaPods dependencies
         script: |
