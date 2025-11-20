@@ -1,3 +1,4 @@
+// Upgrade Modal - All subscription plans with fallback pricing
 import React, { useState, useEffect } from 'react';
 import {
   View,
