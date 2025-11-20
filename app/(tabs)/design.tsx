@@ -1,3 +1,4 @@
+// Design Screen - Updated with drag functionality and complete IAP integration
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
