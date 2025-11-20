@@ -42,10 +42,7 @@ workflows:
 
       - name: Set up code signing
         script: |
-          XCODEPROJ=$(find ios -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
-          PROJECT_NAME=$(basename "$XCODEPROJ" .xcodeproj)
-          echo "Configuring signing for project: $PROJECT_NAME"
-          xcode-project use-profiles --project "$XCODEPROJ" --target "$PROJECT_NAME"
+          xcode-project use-profiles
 
       - name: Install CocoaPods dependencies
         script: |
