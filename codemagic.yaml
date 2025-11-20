@@ -32,13 +32,20 @@ workflows:
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
           echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
 
-      - name: Remove existing iOS folder
+      - name: Verify package.json and clear caches
         script: |
-          rm -rf ios
+          echo "=== Package name from package.json ==="
+          cat package.json | grep '"name"'
+          echo "=== App name from app.json ==="
+          cat app.json | grep -A1 '"name"'
+          rm -rf ios android .expo node_modules/.cache
 
       - name: Prebuild iOS project
         script: |
-          npx expo prebuild --platform ios
+          npx expo prebuild --platform ios --clean
+          echo "=== Verifying created iOS project ==="
+          ls -la ios/
+          find ios -name "*.xcodeproj" -type d
 
       - name: Set up code signing settings on Xcode project
         script: |
