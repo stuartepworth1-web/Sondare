@@ -69,7 +69,18 @@ workflows:
         script: |
           XCODEPROJ=$(find ios -name "*.xcodeproj" -type d | head -1)
           cd "$XCODEPROJ/.."
-          NEW_BUILD_NUMBER=$(($(date +%s) / 60))
+          # Get current build number
+          CURRENT_BUILD=$(agvtool what-version -terse)
+          # Generate timestamp-based build number
+          TIMESTAMP_BUILD=$(($(date +%s) / 60))
+          # Use the higher of the two to ensure we always increment
+          if [ $TIMESTAMP_BUILD -le $CURRENT_BUILD ]; then
+            NEW_BUILD_NUMBER=$((CURRENT_BUILD + 1))
+          else
+            NEW_BUILD_NUMBER=$TIMESTAMP_BUILD
+          fi
+          echo "Current build number: $CURRENT_BUILD"
+          echo "Timestamp build number: $TIMESTAMP_BUILD"
           echo "Setting build number to: $NEW_BUILD_NUMBER"
           agvtool new-version -all $NEW_BUILD_NUMBER
 
