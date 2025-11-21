@@ -11,8 +11,9 @@ import {
   Image,
   Alert,
   TextInput,
-  PanResponder,
 } from 'react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -94,7 +95,7 @@ interface PresetDesign {
 }
 
 const COLORS = [
-  '#FF9500', '#007AFF', '#34C759', '#FF3B30', '#5856D6',
+  '#f97315', '#007AFF', '#34C759', '#FF3B30', '#5856D6',
   '#AF52DE', '#FF2D55', '#FFCC00', '#000000', '#FFFFFF',
   '#8E8E93', '#F5F5F5', '#2C2C2E', '#1C1C1E', '#38383A',
 ];
@@ -103,7 +104,7 @@ const GRADIENT_PRESETS = [
   { name: 'Sunset', colors: ['#FF6B6B', '#FF8E53'] },
   { name: 'Ocean', colors: ['#4E54C8', '#8F94FB'] },
   { name: 'Forest', colors: ['#134E5E', '#71B280'] },
-  { name: 'Fire', colors: ['#FF9500', '#FF3B30'] },
+  { name: 'Fire', colors: ['#f97315', '#FF3B30'] },
   { name: 'Night', colors: ['#000000', '#2C2C2E'] },
   { name: 'Dawn', colors: ['#F5F5F5', '#E5E5E5'] },
 ];
@@ -117,7 +118,7 @@ const presetDesigns: PresetDesign[] = [
       type: 'button',
       width: 200,
       height: 48,
-      backgroundColor: '#FF9500',
+      backgroundColor: '#f97315',
       text: 'Get Started',
       fontSize: 16,
       borderRadius: 12,
@@ -151,9 +152,9 @@ const presetDesigns: PresetDesign[] = [
       text: 'Cancel',
       fontSize: 15,
       borderRadius: 10,
-      textColor: '#FF9500',
+      textColor: '#f97315',
       borderWidth: 2,
-      borderColor: '#FF9500',
+      borderColor: '#f97315',
     },
   },
   {
@@ -356,47 +357,43 @@ const presetDesigns: PresetDesign[] = [
       backgroundColor: '#FFFFFF',
       borderRadius: 20,
       borderWidth: 2,
-      borderColor: '#FF9500',
+      borderColor: '#f97315',
     },
   },
 ];
 
-function DraggableElement({ element, isSelected, onDrag, onDragEnd, children }: {
+function DraggableElement({ element, isSelected, onDrag, onDragEnd, onSelect, children }: {
   element: CanvasElement;
   isSelected: boolean;
   onDrag: (newX: number, newY: number) => void;
   onDragEnd: () => void;
+  onSelect: () => void;
   children: React.ReactNode;
 }) {
-  const startPos = useRef({ x: 0, y: 0, elementX: 0, elementY: 0 });
+  const startX = useSharedValue(element.x);
+  const startY = useSharedValue(element.y);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => isSelected,
-      onMoveShouldSetPanResponder: () => isSelected,
-      onPanResponderGrant: (e, gestureState) => {
-        startPos.current = {
-          x: gestureState.x0,
-          y: gestureState.y0,
-          elementX: element.x,
-          elementY: element.y,
-        };
-      },
-      onPanResponderMove: (e, gestureState) => {
-        const newX = startPos.current.elementX + gestureState.dx;
-        const newY = startPos.current.elementY + gestureState.dy;
-        onDrag(newX, newY);
-      },
-      onPanResponderRelease: () => {
-        onDragEnd();
-      },
+  const gesture = Gesture.Pan()
+    .onStart(() => {
+      runOnJS(onSelect)();
+      startX.value = element.x;
+      startY.value = element.y;
     })
-  ).current;
+    .onUpdate((e) => {
+      const newX = startX.value + e.translationX;
+      const newY = startY.value + e.translationY;
+      runOnJS(onDrag)(newX, newY);
+    })
+    .onEnd(() => {
+      runOnJS(onDragEnd)();
+    });
 
   return (
-    <View {...panResponder.panHandlers} style={{ flex: 1, width: '100%', height: '100%' }}>
-      {children}
-    </View>
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={{ flex: 1, width: '100%', height: '100%' }}>
+        {children}
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -408,75 +405,66 @@ function ResizeHandle({ corner, element, onResize, screenType, screenSizes, snap
   screenSizes: any;
   snapToGridValue: (value: number) => number;
 }) {
-  const startValues = useRef({ x: 0, y: 0, width: 0, height: 0, elementX: 0, elementY: 0 });
+  const startValues = useRef({ width: 0, height: 0, elementX: 0, elementY: 0 });
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e, gestureState) => {
-        startValues.current = {
-          x: gestureState.x0,
-          y: gestureState.y0,
-          width: element.width,
-          height: element.height,
-          elementX: element.x,
-          elementY: element.y,
-        };
-      },
-      onPanResponderMove: (e, gestureState) => {
-        const deltaX = gestureState.dx;
-        const deltaY = gestureState.dy;
-
-        let newWidth = startValues.current.width;
-        let newHeight = startValues.current.height;
-        let newX = startValues.current.elementX;
-        let newY = startValues.current.elementY;
-
-        const maxWidth = screenSizes[screenType].width;
-        const maxHeight = screenSizes[screenType].height;
-
-        if (corner === 'se') {
-          newWidth = Math.max(50, Math.min(maxWidth - element.x, startValues.current.width + deltaX));
-          newHeight = Math.max(30, Math.min(maxHeight - element.y, startValues.current.height + deltaY));
-        } else if (corner === 'sw') {
-          const widthChange = -deltaX;
-          const potentialWidth = startValues.current.width + widthChange;
-          const potentialX = startValues.current.elementX - widthChange;
-          newWidth = Math.max(50, potentialWidth);
-          newX = Math.max(0, Math.min(potentialX, startValues.current.elementX + startValues.current.width - 50));
-          newHeight = Math.max(30, Math.min(maxHeight - element.y, startValues.current.height + deltaY));
-        } else if (corner === 'ne') {
-          newWidth = Math.max(50, Math.min(maxWidth - element.x, startValues.current.width + deltaX));
-          const heightChange = -deltaY;
-          const potentialHeight = startValues.current.height + heightChange;
-          const potentialY = startValues.current.elementY - heightChange;
-          newHeight = Math.max(30, potentialHeight);
-          newY = Math.max(0, Math.min(potentialY, startValues.current.elementY + startValues.current.height - 30));
-        } else if (corner === 'nw') {
-          const widthChange = -deltaX;
-          const potentialWidth = startValues.current.width + widthChange;
-          const potentialX = startValues.current.elementX - widthChange;
-          newWidth = Math.max(50, potentialWidth);
-          newX = Math.max(0, Math.min(potentialX, startValues.current.elementX + startValues.current.width - 50));
-          const heightChange = -deltaY;
-          const potentialHeight = startValues.current.height + heightChange;
-          const potentialY = startValues.current.elementY - heightChange;
-          newHeight = Math.max(30, potentialHeight);
-          newY = Math.max(0, Math.min(potentialY, startValues.current.elementY + startValues.current.height - 30));
-        }
-
-        onResize({
-          width: snapToGridValue(newWidth),
-          height: snapToGridValue(newHeight),
-          x: snapToGridValue(newX),
-          y: snapToGridValue(newY),
-        });
-      },
-      onPanResponderRelease: () => {
-      },
+  const gesture = Gesture.Pan()
+    .onStart(() => {
+      startValues.current = {
+        width: element.width,
+        height: element.height,
+        elementX: element.x,
+        elementY: element.y,
+      };
     })
-  ).current;
+    .onUpdate((e) => {
+      const deltaX = e.translationX;
+      const deltaY = e.translationY;
+
+      let newWidth = startValues.current.width;
+      let newHeight = startValues.current.height;
+      let newX = startValues.current.elementX;
+      let newY = startValues.current.elementY;
+
+      const maxWidth = screenSizes[screenType].width;
+      const maxHeight = screenSizes[screenType].height;
+
+      if (corner === 'se') {
+        newWidth = Math.max(50, Math.min(maxWidth - element.x, startValues.current.width + deltaX));
+        newHeight = Math.max(30, Math.min(maxHeight - element.y, startValues.current.height + deltaY));
+      } else if (corner === 'sw') {
+        const widthChange = -deltaX;
+        const potentialWidth = startValues.current.width + widthChange;
+        const potentialX = startValues.current.elementX - widthChange;
+        newWidth = Math.max(50, potentialWidth);
+        newX = Math.max(0, Math.min(potentialX, startValues.current.elementX + startValues.current.width - 50));
+        newHeight = Math.max(30, Math.min(maxHeight - element.y, startValues.current.height + deltaY));
+      } else if (corner === 'ne') {
+        newWidth = Math.max(50, Math.min(maxWidth - element.x, startValues.current.width + deltaX));
+        const heightChange = -deltaY;
+        const potentialHeight = startValues.current.height + heightChange;
+        const potentialY = startValues.current.elementY - heightChange;
+        newHeight = Math.max(30, potentialHeight);
+        newY = Math.max(0, Math.min(potentialY, startValues.current.elementY + startValues.current.height - 30));
+      } else if (corner === 'nw') {
+        const widthChange = -deltaX;
+        const potentialWidth = startValues.current.width + widthChange;
+        const potentialX = startValues.current.elementX - widthChange;
+        newWidth = Math.max(50, potentialWidth);
+        newX = Math.max(0, Math.min(potentialX, startValues.current.elementX + startValues.current.width - 50));
+        const heightChange = -deltaY;
+        const potentialHeight = startValues.current.height + heightChange;
+        const potentialY = startValues.current.elementY - heightChange;
+        newHeight = Math.max(30, potentialHeight);
+        newY = Math.max(0, Math.min(potentialY, startValues.current.elementY + startValues.current.height - 30));
+      }
+
+      runOnJS(onResize)({
+        width: snapToGridValue(newWidth),
+        height: snapToGridValue(newHeight),
+        x: snapToGridValue(newX),
+        y: snapToGridValue(newY),
+      });
+    });
 
   const cornerStyles = {
     nw: styles.cornerTopLeft,
@@ -486,15 +474,14 @@ function ResizeHandle({ corner, element, onResize, screenType, screenSizes, snap
   };
 
   return (
-    <View
-      {...panResponder.panHandlers}
-      style={[styles.cornerDot, cornerStyles[corner]]}
-    />
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={[styles.cornerDot, cornerStyles[corner]]} />
+    </GestureDetector>
   );
 }
 
 export default function DesignScreen() {
-  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const { credits, profile } = useCredits();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showPresetsModal, setShowPresetsModal] = useState(false);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
@@ -520,6 +507,8 @@ export default function DesignScreen() {
     opacity: 1,
   });
   const moveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const moveSpeedRef = useRef<{ current: number }>({ current: 1 });
+  const accelerationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const screenSizes = {
     mobile: { width: 320, height: 568 },
@@ -564,7 +553,7 @@ export default function DesignScreen() {
       y: 100,
       width: type === 'button' ? 160 : type === 'text' ? 150 : type === 'audio' ? 300 : type === 'video' ? 320 : 200,
       height: type === 'button' ? 44 : type === 'text' ? 30 : type === 'audio' ? 60 : type === 'video' ? 180 : 150,
-      backgroundColor: type === 'button' ? '#FF9500' : type === 'container' ? '#F5F5F5' : type === 'audio' ? '#1C1C1E' : type === 'video' ? '#000000' : 'transparent',
+      backgroundColor: type === 'button' ? '#f97315' : type === 'container' ? '#F5F5F5' : type === 'audio' ? '#1C1C1E' : type === 'video' ? '#000000' : 'transparent',
       text: type === 'text' ? 'Text Label' : type === 'button' ? 'Button' : type === 'audio' ? 'Audio Player' : type === 'video' ? 'Video Player' : undefined,
       fontSize: type === 'text' ? 16 : type === 'button' ? 15 : undefined,
       borderRadius: type === 'button' ? 12 : type === 'container' ? 16 : 8,
@@ -656,9 +645,16 @@ export default function DesignScreen() {
   };
 
   const startContinuousMove = (id: string, deltaX: number, deltaY: number) => {
-    moveElement(id, deltaX, deltaY);
+    moveSpeedRef.current.current = 1;
+
+    moveElement(id, deltaX * moveSpeedRef.current.current, deltaY * moveSpeedRef.current.current);
+
+    accelerationTimerRef.current = setTimeout(() => {
+      moveSpeedRef.current.current = 3;
+    }, 500);
+
     moveIntervalRef.current = setInterval(() => {
-      moveElement(id, deltaX, deltaY);
+      moveElement(id, deltaX * moveSpeedRef.current.current, deltaY * moveSpeedRef.current.current);
     }, 50);
   };
 
@@ -667,6 +663,13 @@ export default function DesignScreen() {
       clearInterval(moveIntervalRef.current);
       moveIntervalRef.current = null;
       saveToHistory(canvasElements);
+    }
+    if (accelerationTimerRef.current) {
+      clearTimeout(accelerationTimerRef.current);
+      accelerationTimerRef.current = null;
+    }
+    if (moveSpeedRef.current) {
+      moveSpeedRef.current.current = 1;
     }
   };
 
@@ -721,41 +724,58 @@ export default function DesignScreen() {
   };
 
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'Permission to access photos is required');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      if (selectedElement) {
-        updateElementProperty(selectedElement, 'imageUri', result.assets[0].uri);
-      } else {
-        const maxZ = Math.max(0, ...canvasElements.map(el => el.zIndex || 0));
-        const newElement: CanvasElement = {
-          id: Date.now().toString(),
-          type: 'image',
-          x: 50,
-          y: 100,
-          width: 200,
-          height: 200,
-          backgroundColor: '#F5F5F5',
-          borderRadius: 12,
-          imageUri: result.assets[0].uri,
-          zIndex: maxZ + 1,
-        };
-        const newElements = [...canvasElements, newElement];
-        setCanvasElements(newElements);
-        saveToHistory(newElements);
-        setSelectedElement(newElement.id);
+    try {
+      if (Platform.OS === 'web') {
+        Alert.alert('Not Supported', 'Image upload is not supported in web preview. This feature works on iOS and Android devices.');
+        return;
       }
+
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Permission to access photos is required');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        allowsMultipleSelection: false,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        if (!asset.uri) {
+          Alert.alert('Error', 'Failed to load image. Please try again.');
+          return;
+        }
+        if (selectedElement) {
+          updateElementProperty(selectedElement, 'imageUri', asset.uri);
+        } else {
+          const maxZ = Math.max(0, ...canvasElements.map(el => el.zIndex || 0));
+          const newElement: CanvasElement = {
+            id: Date.now().toString(),
+            type: 'image',
+            x: 50,
+            y: 100,
+            width: 200,
+            height: 200,
+            backgroundColor: '#F5F5F5',
+            borderRadius: 12,
+            imageUri: asset.uri,
+            zIndex: maxZ + 1,
+          };
+          const newElements = [...canvasElements, newElement];
+          setCanvasElements(newElements);
+          saveToHistory(newElements);
+          setSelectedElement(newElement.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to load image. Please try again.');
     }
   };
 
@@ -871,7 +891,7 @@ export default function DesignScreen() {
     >
       <CreditsBar
         credits={credits}
-        creditsUsed={creditsUsed}
+        creditsUsed={profile?.total_credits_spent ?? 0}
         onUpgrade={() => setShowUpgradeModal(true)}
       />
 
@@ -946,7 +966,7 @@ export default function DesignScreen() {
               style={styles.toolButton}
               onPress={() => addElement('text')}
             >
-              <Type size={20} color="#FF9500" />
+              <Type size={20} color="#f97315" />
               <Text style={styles.toolButtonText}>Text</Text>
             </TouchableOpacity>
 
@@ -954,7 +974,7 @@ export default function DesignScreen() {
               style={styles.toolButton}
               onPress={() => addElement('button')}
             >
-              <Palette size={20} color="#FF9500" />
+              <Palette size={20} color="#f97315" />
               <Text style={styles.toolButtonText}>Button</Text>
             </TouchableOpacity>
 
@@ -962,7 +982,7 @@ export default function DesignScreen() {
               style={styles.toolButton}
               onPress={() => addElement('image')}
             >
-              <ImageIcon size={20} color="#FF9500" />
+              <ImageIcon size={20} color="#f97315" />
               <Text style={styles.toolButtonText}>Image</Text>
             </TouchableOpacity>
 
@@ -970,7 +990,7 @@ export default function DesignScreen() {
               style={styles.toolButton}
               onPress={() => addElement('container')}
             >
-              <Layout size={20} color="#FF9500" />
+              <Layout size={20} color="#f97315" />
               <Text style={styles.toolButtonText}>Container</Text>
             </TouchableOpacity>
 
@@ -978,7 +998,7 @@ export default function DesignScreen() {
               style={styles.toolButton}
               onPress={() => addElement('audio')}
             >
-              <Music size={20} color="#FF9500" />
+              <Music size={20} color="#f97315" />
               <Text style={styles.toolButtonText}>Audio</Text>
             </TouchableOpacity>
 
@@ -986,7 +1006,7 @@ export default function DesignScreen() {
               style={styles.toolButton}
               onPress={() => addElement('video')}
             >
-              <Video size={20} color="#FF9500" />
+              <Video size={20} color="#f97315" />
               <Text style={styles.toolButtonText}>Video</Text>
             </TouchableOpacity>
 
@@ -1032,7 +1052,7 @@ export default function DesignScreen() {
             ]}
             onPress={() => setScreenType('mobile')}
           >
-            <Smartphone size={20} color={screenType === 'mobile' ? '#FF9500' : '#8E8E93'} />
+            <Smartphone size={20} color={screenType === 'mobile' ? '#f97315' : '#8E8E93'} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -1041,7 +1061,7 @@ export default function DesignScreen() {
             ]}
             onPress={() => setScreenType('tablet')}
           >
-            <Tablet size={20} color={screenType === 'tablet' ? '#FF9500' : '#8E8E93'} />
+            <Tablet size={20} color={screenType === 'tablet' ? '#f97315' : '#8E8E93'} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -1050,7 +1070,7 @@ export default function DesignScreen() {
             ]}
             onPress={() => setScreenType('desktop')}
           >
-            <Monitor size={20} color={screenType === 'desktop' ? '#FF9500' : '#8E8E93'} />
+            <Monitor size={20} color={screenType === 'desktop' ? '#f97315' : '#8E8E93'} />
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -1060,7 +1080,7 @@ export default function DesignScreen() {
           ]}
           onPress={() => setSnapToGrid(!snapToGrid)}
         >
-          <Grid3x3 size={20} color={snapToGrid ? '#FF9500' : '#8E8E93'} />
+          <Grid3x3 size={20} color={snapToGrid ? '#f97315' : '#8E8E93'} />
         </TouchableOpacity>
       </View>
 
@@ -1136,7 +1156,7 @@ export default function DesignScreen() {
                         height: element.height,
                         backgroundColor: element.backgroundColor,
                         borderWidth: isSelected ? 2 : element.borderWidth || 0,
-                        borderColor: isSelected ? '#FF9500' : element.borderColor || 'transparent',
+                        borderColor: isSelected ? '#f97315' : element.borderColor || 'transparent',
                         borderRadius: element.borderRadius || 8,
                         zIndex: element.zIndex || 0,
                         opacity: element.opacity || 1,
@@ -1149,6 +1169,7 @@ export default function DesignScreen() {
                       isSelected={isSelected}
                       onDrag={(newX, newY) => handleElementDrag(element.id, newX, newY)}
                       onDragEnd={() => saveToHistory(canvasElements)}
+                      onSelect={() => setSelectedElement(element.id)}
                     >
                       {element.type === 'text' && (
                       <Text
@@ -1166,19 +1187,21 @@ export default function DesignScreen() {
                       </Text>
                     )}
                     {element.type === 'button' && (
-                      <Text
-                        style={[
-                          styles.buttonText,
-                          {
-                            fontSize: element.fontSize,
-                            color: element.textColor || '#FFFFFF',
-                            textAlign: element.textAlign || 'center',
-                            fontWeight: element.fontWeight || '600',
-                          },
-                        ]}
-                      >
-                        {element.text}
-                      </Text>
+                      <View style={styles.buttonTextContainer}>
+                        <Text
+                          style={[
+                            styles.buttonText,
+                            {
+                              fontSize: element.fontSize,
+                              color: element.textColor || '#FFFFFF',
+                              textAlign: element.textAlign || 'center',
+                              fontWeight: element.fontWeight || '600',
+                            },
+                          ]}
+                        >
+                          {element.text}
+                        </Text>
+                      </View>
                     )}
                     {element.type === 'image' && (
                       <View style={styles.imagePlaceholder}>
@@ -1191,7 +1214,7 @@ export default function DesignScreen() {
                     )}
                     {element.type === 'audio' && (
                       <View style={[styles.mediaPlaceholder, {justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8}]}>
-                        <Music size={24} color="#FF9500" />
+                        <Music size={24} color="#f97315" />
                         <Text style={{color: '#FFFFFF', fontSize: 14}}>{element.text}</Text>
                       </View>
                     )}
@@ -1329,7 +1352,7 @@ export default function DesignScreen() {
                   style={styles.propertyButton}
                   onPress={startEditText}
                 >
-                  <Edit3 size={18} color="#FF9500" />
+                  <Edit3 size={18} color="#f97315" />
                   <Text style={styles.propertyButtonText}>Edit</Text>
                 </TouchableOpacity>
               )}
@@ -1542,12 +1565,12 @@ export default function DesignScreen() {
             {[...canvasElements].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)).map((element, index) => (
               <View key={element.id} style={styles.layerItem}>
                 <View style={styles.layerInfo}>
-                  {element.type === 'text' && <Type size={20} color="#FF9500" />}
-                  {element.type === 'button' && <Palette size={20} color="#FF9500" />}
-                  {element.type === 'image' && <ImageIcon size={20} color="#FF9500" />}
-                  {element.type === 'audio' && <Music size={20} color="#FF9500" />}
-                  {element.type === 'video' && <Video size={20} color="#FF9500" />}
-                  {element.type === 'container' && <Layout size={20} color="#FF9500" />}
+                  {element.type === 'text' && <Type size={20} color="#f97315" />}
+                  {element.type === 'button' && <Palette size={20} color="#f97315" />}
+                  {element.type === 'image' && <ImageIcon size={20} color="#f97315" />}
+                  {element.type === 'audio' && <Music size={20} color="#f97315" />}
+                  {element.type === 'video' && <Video size={20} color="#f97315" />}
+                  {element.type === 'container' && <Layout size={20} color="#f97315" />}
                   <View style={styles.layerTextInfo}>
                     <Text style={styles.layerName}>
                       {element.type.charAt(0).toUpperCase() + element.type.slice(1)}
@@ -1801,7 +1824,7 @@ export default function DesignScreen() {
                   <>
                     <Text style={styles.propertySectionTitle}>Image</Text>
                     <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                      <Upload size={20} color="#FF9500" />
+                      <Upload size={20} color="#f97315" />
                       <Text style={styles.uploadButtonText}>
                         {selectedElementData.imageUri ? 'Change Image' : 'Upload Image'}
                       </Text>
@@ -2051,9 +2074,9 @@ export default function DesignScreen() {
       <UpgradeModalIAP
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        currentTier={currentTier}
+        currentTier={"free" as any}
         onUpgradeSuccess={async () => {
-          await refreshSubscriptionStatus();
+          {}
         }}
       />
     </LinearGradient>
@@ -2096,7 +2119,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   headerButtonActive: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
   },
   toolbar: {
     backgroundColor: '#1C1C1E',
@@ -2163,7 +2186,7 @@ const styles = StyleSheet.create({
     borderColor: '#38383A',
   },
   sizeButtonActive: {
-    borderColor: '#FF9500',
+    borderColor: '#f97315',
     backgroundColor: '#2C2C2E',
   },
   sizeButtonText: {
@@ -2172,7 +2195,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   sizeButtonTextActive: {
-    color: '#FF9500',
+    color: '#f97315',
   },
   content: {
     flex: 1,
@@ -2235,6 +2258,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 8,
   },
+  buttonTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
+  },
   buttonText: {
     fontWeight: '600',
     textAlign: 'center',
@@ -2277,7 +2307,7 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -2316,7 +2346,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 20,
     height: 20,
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 10,
     borderWidth: 3,
     borderColor: '#FFFFFF',
@@ -2413,7 +2443,7 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 24,
   },
   moveButtonSpacer: {
@@ -2498,7 +2528,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -2602,7 +2632,7 @@ const styles = StyleSheet.create({
     borderColor: '#38383A',
   },
   colorSwatchSelected: {
-    borderColor: '#FF9500',
+    borderColor: '#f97315',
     borderWidth: 3,
   },
   uploadButton: {
@@ -2617,7 +2647,7 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
   },
   radiusOptions: {
     flexDirection: 'row',
@@ -2633,7 +2663,7 @@ const styles = StyleSheet.create({
     borderColor: '#38383A',
   },
   radiusButtonActive: {
-    borderColor: '#FF9500',
+    borderColor: '#f97315',
     backgroundColor: '#2C2C2E',
   },
   radiusButtonText: {
@@ -2642,7 +2672,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   radiusButtonTextActive: {
-    color: '#FF9500',
+    color: '#f97315',
   },
   sizeControls: {
     gap: 16,
@@ -2681,7 +2711,7 @@ const styles = StyleSheet.create({
   sizeValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
     minWidth: 40,
     textAlign: 'center',
   },

@@ -102,6 +102,12 @@ export function UpgradeModalIAP({
     try {
       const currentOffering = await getOfferings();
 
+      const productIdMap: { [key: string]: string } = {
+        'starter': 'com.sondare.app.pro_monthly',
+        'pro': 'com.sondare.pro.monthly',
+        'entrepreneur': 'com.sondare.entrepreneur.monthly',
+      };
+
       const allPlanIdentifiers = ['starter', 'pro', 'entrepreneur'];
       const availablePlans: PlanDisplay[] = [];
 
@@ -113,7 +119,19 @@ export function UpgradeModalIAP({
         if (planId === 'pro') price = '$9.99';
         if (planId === 'entrepreneur') price = '$29.99';
 
-        const pkg = currentOffering?.availablePackages?.find((p: any) => p.identifier === planId);
+        // Try to find package by identifier (case-insensitive)
+        let pkg = currentOffering?.availablePackages?.find(
+          (p: any) => p.identifier?.toLowerCase() === planId.toLowerCase()
+        );
+
+        // If not found, try by product ID
+        if (!pkg) {
+          const targetProductId = productIdMap[planId];
+          pkg = currentOffering?.availablePackages?.find(
+            (p: any) => p.product.identifier === targetProductId
+          );
+        }
+
         if (pkg) {
           price = pkg.product.priceString;
         }
@@ -166,18 +184,50 @@ export function UpgradeModalIAP({
       return;
     }
 
-    if (!offering) {
-      Alert.alert('Error', 'No subscription packages available.');
+    if (!offering || !offering.availablePackages || offering.availablePackages.length === 0) {
+      Alert.alert('Error', 'No subscription packages available. Please check your network connection and try again.');
       return;
     }
 
-    const pkg = offering.availablePackages.find(
-      (p: any) => p.identifier === planIdentifier
+    // RevenueCat uses package names as identifiers, try both exact match and case-insensitive
+    let pkg = offering.availablePackages.find(
+      (p: any) => p.identifier?.toLowerCase() === planIdentifier.toLowerCase()
     );
 
+    // If not found by identifier, try matching by product ID
     if (!pkg) {
-      Alert.alert('Error', 'Selected plan not found.');
-      return;
+      const productIdMap: { [key: string]: string } = {
+        'starter': 'com.sondare.app.pro_monthly',
+        'pro': 'com.sondare.pro.monthly',
+        'entrepreneur': 'com.sondare.entrepreneur.monthly',
+      };
+
+      const targetProductId = productIdMap[planIdentifier];
+      pkg = offering.availablePackages.find(
+        (p: any) => p.product.identifier === targetProductId
+      );
+    }
+
+    if (!pkg) {
+      // Try to find any package as fallback
+      if (offering.availablePackages.length > 0) {
+        // Match by index as last resort: starter=0, pro=1, entrepreneur=2
+        const planIndex = ['starter', 'pro', 'entrepreneur'].indexOf(planIdentifier);
+        if (planIndex >= 0 && planIndex < offering.availablePackages.length) {
+          pkg = offering.availablePackages[planIndex];
+          console.log('Using fallback package by index:', planIndex);
+        }
+      }
+
+      if (!pkg) {
+        Alert.alert('Error', `The ${plan.name} plan is not currently available. Please try again later or contact support.`);
+        console.error('Package not found for plan:', planIdentifier);
+        console.error('Available packages:', offering.availablePackages.map((p: any) => ({
+          packageId: p.identifier,
+          productId: p.product.identifier
+        })));
+        return;
+      }
     }
 
     setLoadingPlanId(planIdentifier);
@@ -232,7 +282,7 @@ export function UpgradeModalIAP({
 
           {isLoadingOfferings ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF9500" />
+              <ActivityIndicator size="large" color="#f97315" />
               <Text style={styles.loadingText}>Loading plans...</Text>
             </View>
           ) : (
@@ -400,7 +450,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   planCardHighlighted: {
-    borderColor: '#FF9500',
+    borderColor: '#f97315',
     backgroundColor: '#1C1C1E',
   },
   planCardCurrent: {
@@ -411,7 +461,7 @@ const styles = StyleSheet.create({
     top: -12,
     left: '50%',
     transform: [{ translateX: -60 }],
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -453,7 +503,7 @@ const styles = StyleSheet.create({
   creditsText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#FF9500',
+    color: '#f97315',
   },
   featuresContainer: {
     marginBottom: 20,
@@ -471,13 +521,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   subscribeButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   subscribeButtonHighlighted: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
   },
   subscribeButtonDisabled: {
     backgroundColor: '#2C2C2E',
@@ -517,7 +567,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   demoBadge: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
