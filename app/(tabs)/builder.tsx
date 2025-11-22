@@ -34,11 +34,11 @@ import {
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
-import { CreditsBar } from '@/components/CreditsBar';
-import { useCredits } from '@/contexts/CreditsContext';
-import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
-import { generateCode, CREDIT_COSTS, type GenerationType } from '@/lib/credits';
-import { supabase } from '@/lib/supabase';
+import { CreditsBar } from '../../components/CreditsBar';
+import { useCredits } from '../../contexts/CreditsContext';
+import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
+import { generateCode, CREDIT_COSTS, type GenerationType } from '../../lib/credits';
+import { supabase } from '../../lib/supabase';
 import { router } from 'expo-router';
 
 interface Template {
