@@ -10,7 +10,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FF9500',
+        tabBarActiveTintColor: '#f97315',
         tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: {
           ...styles.tabBar,
@@ -92,6 +92,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="settings/privacy"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="projects/[id]"
         options={{
           href: null,
         }}
