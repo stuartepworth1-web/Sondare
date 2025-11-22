@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Send, Zap, Target, Smartphone } from 'lucide-react-native';
-import { CreditsBar } from '@/components/CreditsBar';
-import { useCredits } from '@/contexts/CreditsContext';
-import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
-import { OnboardingTutorial } from '@/components/OnboardingTutorial';
+import { CreditsBar } from '../../components/CreditsBar';
+import { useCredits } from '../../contexts/CreditsContext';
+import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
+import { OnboardingTutorial } from '../../components/OnboardingTutorial';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 interface AppIdea {
   id: string;

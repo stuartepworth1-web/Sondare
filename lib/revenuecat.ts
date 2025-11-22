@@ -22,7 +22,6 @@ if (Platform.OS !== 'web') {
 }
 
 const REVENUECAT_APPLE_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY || '';
-const REVENUECAT_GOOGLE_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY || '';
 
 const ENTITLEMENT_IDENTIFIERS = {
   starter: 'starter',
@@ -39,8 +38,6 @@ export async function configureRevenueCat(): Promise<void> {
   try {
     if (Platform.OS === 'ios') {
       await Purchases.configure({ apiKey: REVENUECAT_APPLE_API_KEY });
-    } else if (Platform.OS === 'android') {
-      await Purchases.configure({ apiKey: REVENUECAT_GOOGLE_API_KEY });
     }
 
     Purchases.setLogLevel(LOG_LEVEL.DEBUG);

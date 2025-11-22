@@ -54,10 +54,10 @@ import {
   Video,
   FileUp,
 } from 'lucide-react-native';
-import { CreditsBar } from '@/components/CreditsBar';
-import { useCredits } from '@/contexts/CreditsContext';
-import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
-import { supabase } from '@/lib/supabase';
+import { CreditsBar } from '../../components/CreditsBar';
+import { useCredits } from '../../contexts/CreditsContext';
+import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
+import { supabase } from '../../lib/supabase';
 
 interface CanvasElement {
   id: string;
