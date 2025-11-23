@@ -15,9 +15,31 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: "https://qplimwowezrqupzxkuio.supabase.co"
         EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
         EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
+        CLAUDE_API_KEY: "sk-ant-api03-fKgvz_dB_SHSFygZfxJUKaQUUmMjsVST7LvC_ydgi-T×8zkQ73TfaAQxyimLtwZOPLpKpQXBTOb7A05M3RzHXg-goWvegAA"
       node: 20
       xcode: latest
     scripts:
+      - name: Verify working directory
+        script: |
+          echo "=== Working Directory ==="
+          pwd
+          echo "=== Project Root Files ==="
+          ls -la
+          echo "=== Checking for app.json ==="
+          if [ ! -f "app.json" ]; then
+            echo "ERROR: app.json not found in current directory!"
+            exit 1
+          fi
+          echo "✅ Correct project root detected"
+
+      - name: Create .env file
+        script: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
+          echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
+          echo "CLAUDE_API_KEY=$CLAUDE_API_KEY" >> .env
+          cat .env
+
       - name: Install dependencies
         script: |
           npm install --legacy-peer-deps
@@ -25,12 +47,6 @@ workflows:
       - name: Install Expo CLI
         script: |
           npm install -g expo-cli @expo/ngrok
-
-      - name: Create .env file
-        script: |
-          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
-          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
-          echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
 
       - name: Verify package.json and clear caches
         script: |
