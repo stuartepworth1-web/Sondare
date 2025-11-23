@@ -11,14 +11,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Zap, CreditCard, User, Bell, Info, RotateCcw, FileText, Shield } from 'lucide-react-native';
-import { restorePurchases } from '@/lib/revenuecat';
+import { restorePurchases } from '../../lib/revenuecat';
 import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
-import { CreditsBar } from '@/components/CreditsBar';
-import { useCredits } from '@/contexts/CreditsContext';
+import { CreditsBar } from '../../components/CreditsBar';
+import { useCredits } from '../../contexts/CreditsContext';
 import { router } from 'expo-router';
 
 export default function SettingsScreen() {
-  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const { credits, profile } = useCredits();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -31,7 +31,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const creditsRemaining = credits - creditsUsed;
+  const creditsRemaining = credits - profile?.total_credits_spent ?? 0;
   const creditsPercentage = (creditsRemaining / credits) * 100;
 
   const handleRestorePurchases = async () => {
@@ -39,7 +39,7 @@ export default function SettingsScreen() {
     try {
       const customerInfo = await restorePurchases();
       if (customerInfo) {
-        await refreshSubscriptionStatus();
+        {}
         Alert.alert('Success', 'Your purchases have been restored successfully!');
       } else {
         Alert.alert('No Purchases', 'No previous purchases were found to restore.');
@@ -61,7 +61,7 @@ export default function SettingsScreen() {
     >
       <CreditsBar
         credits={credits}
-        creditsUsed={creditsUsed}
+        creditsUsed={profile?.total_credits_spent ?? 0}
         onUpgrade={() => setShowUpgradeModal(true)}
       />
       <View style={styles.header}>
@@ -73,7 +73,7 @@ export default function SettingsScreen() {
         <View style={styles.creditsCard}>
           <View style={styles.creditsHeader}>
             <View style={styles.creditsIconContainer}>
-              <Zap size={24} color="#FF9500" />
+              <Zap size={24} color="#f97315" />
             </View>
             <View style={styles.creditsInfo}>
               <Text style={styles.creditsTitle}>AI Generation Credits</Text>
@@ -100,12 +100,12 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Current Plan</Text>
           <View style={styles.planCard}>
             <Text style={styles.planName}>
-              {currentTier === 'free' ? 'Free Plan' :
-               currentTier === 'starter' ? 'Starter Plan' :
-               currentTier === 'pro' ? 'Pro Plan' : 'Entrepreneur Plan'}
+              {(profile?.subscription_tier || 'free') === 'free' ? 'Free Plan' :
+               (profile?.subscription_tier || 'free') === 'starter' ? 'Starter Plan' :
+               (profile?.subscription_tier || 'free') === 'pro' ? 'Pro Plan' : 'Entrepreneur Plan'}
             </Text>
             <Text style={styles.planCredits}>
-              {getCreditsForTier(currentTier)} AI Generations/month
+              {getCreditsForTier(profile?.subscription_tier || 'free')} AI Generations/month
             </Text>
             <TouchableOpacity
               style={styles.changePlanButton}
@@ -121,10 +121,10 @@ export default function SettingsScreen() {
                 disabled={isRestoring}
               >
                 {isRestoring ? (
-                  <ActivityIndicator size="small" color="#FF9500" />
+                  <ActivityIndicator size="small" color="#f97315" />
                 ) : (
                   <>
-                    <RotateCcw size={16} color="#FF9500" />
+                    <RotateCcw size={16} color="#f97315" />
                     <Text style={styles.restoreButtonText}>Restore Purchases</Text>
                   </>
                 )}
@@ -141,7 +141,7 @@ export default function SettingsScreen() {
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
-                <User size={20} color="#FF9500" />
+                <User size={20} color="#f97315" />
               </View>
               <Text style={styles.settingItemText}>Profile Settings</Text>
             </View>
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
-                <Bell size={20} color="#FF9500" />
+                <Bell size={20} color="#f97315" />
               </View>
               <Text style={styles.settingItemText}>Notifications</Text>
             </View>
@@ -168,7 +168,7 @@ export default function SettingsScreen() {
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
-                <FileText size={20} color="#FF9500" />
+                <FileText size={20} color="#f97315" />
               </View>
               <Text style={styles.settingItemText}>Terms of Use</Text>
             </View>
@@ -180,7 +180,7 @@ export default function SettingsScreen() {
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
-                <Shield size={20} color="#FF9500" />
+                <Shield size={20} color="#f97315" />
               </View>
               <Text style={styles.settingItemText}>Privacy Policy</Text>
             </View>
@@ -195,7 +195,7 @@ export default function SettingsScreen() {
           >
             <View style={styles.settingItemLeft}>
               <View style={styles.settingIcon}>
-                <Info size={20} color="#FF9500" />
+                <Info size={20} color="#f97315" />
               </View>
               <Text style={styles.settingItemText}>App Information</Text>
             </View>
@@ -208,9 +208,9 @@ export default function SettingsScreen() {
       <UpgradeModalIAP
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        currentTier={currentTier}
+        currentTier={"free" as any}
         onUpgradeSuccess={async () => {
-          await refreshSubscriptionStatus();
+          {}
         }}
       />
     </LinearGradient>
@@ -290,11 +290,11 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 4,
   },
   upgradeButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     paddingVertical: 14,
     borderRadius: 10,
     flexDirection: 'row',
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   planCredits: {
     fontSize: 15,
     fontWeight: '400',
-    color: '#FF9500',
+    color: '#f97315',
     marginBottom: 16,
   },
   changePlanButton: {
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#FF9500',
+    borderColor: '#f97315',
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 12,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   restoreButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
   },
   settingItem: {
     backgroundColor: '#1C1C1E',

@@ -1,115 +1,59 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import {
-  configureRevenueCat,
-  getCustomerInfo,
-  getActiveSubscriptionTier,
-  getCreditsForTier,
-  type SubscriptionTier,
-} from '@/lib/revenuecat';
-
-let Purchases: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    Purchases = require('react-native-purchases').default;
-  } catch (error) {
-    console.warn('react-native-purchases not available');
-  }
-}
+import { getUserProfile, type UserProfile } from '@/lib/credits';
+import { supabase } from '@/lib/supabase';
 
 interface CreditsContextType {
   credits: number;
-  creditsUsed: number;
-  currentTier: SubscriptionTier;
-  useCredit: () => void;
-  setTier: (tier: SubscriptionTier) => void;
-  refreshSubscriptionStatus: () => Promise<void>;
+  profile: UserProfile | null;
   isLoading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined);
 
 export function CreditsProvider({ children }: { children: ReactNode }) {
-  const [currentTier, setCurrentTier] = useState<SubscriptionTier>('free');
-  const [creditsUsed, setCreditsUsed] = useState(0);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const credits = getCreditsForTier(currentTier);
-
-  const updateSubscriptionStatus = async () => {
-    if (Platform.OS === 'web') {
-      setIsLoading(false);
-      return;
-    }
-
+  const loadProfile = async () => {
     try {
-      const customerInfo = await getCustomerInfo();
-      const tier = getActiveSubscriptionTier(customerInfo);
-      setCurrentTier(tier);
+      const userProfile = await getUserProfile();
+      setProfile(userProfile);
     } catch (error) {
-      console.error('Error updating subscription status:', error);
+      console.error('Error loading profile:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refreshSubscriptionStatus = async () => {
-    await updateSubscriptionStatus();
+  const refreshProfile = async () => {
+    await loadProfile();
   };
 
   useEffect(() => {
-    const initializeRevenueCat = async () => {
-      if (Platform.OS === 'web') {
-        setIsLoading(false);
-        return;
+    loadProfile();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        loadProfile();
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
       }
+    });
 
-      try {
-        await configureRevenueCat();
-        await updateSubscriptionStatus();
-
-        if (Purchases) {
-          const customerInfoUpdateListener = (info: any) => {
-            const tier = getActiveSubscriptionTier(info);
-            setCurrentTier(tier);
-          };
-
-          Purchases.addCustomerInfoUpdateListener(customerInfoUpdateListener);
-
-          return () => {
-            Purchases.removeCustomerInfoUpdateListener(customerInfoUpdateListener);
-          };
-        }
-      } catch (error) {
-        console.error('Failed to initialize RevenueCat:', error);
-        setIsLoading(false);
-      }
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-
-    initializeRevenueCat();
   }, []);
-
-  const useCredit = () => {
-    if (creditsUsed < credits) {
-      setCreditsUsed(prev => prev + 1);
-    }
-  };
-
-  const setTier = (tier: SubscriptionTier) => {
-    setCurrentTier(tier);
-    setCreditsUsed(0);
-  };
 
   return (
     <CreditsContext.Provider
       value={{
-        credits,
-        creditsUsed,
-        currentTier,
-        useCredit,
-        setTier,
-        refreshSubscriptionStatus,
+        credits: profile?.credits ?? 0,
+        profile,
         isLoading,
+        refreshProfile,
       }}
     >
       {children}

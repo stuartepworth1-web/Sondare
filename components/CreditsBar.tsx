@@ -10,17 +10,17 @@ interface CreditsBarProps {
 }
 
 export function CreditsBar({ credits, creditsUsed, onUpgrade }: CreditsBarProps) {
-  const creditsRemaining = credits - creditsUsed;
-  const creditsPercentage = (creditsRemaining / credits) * 100;
+  const creditsRemaining = credits;
+  const creditsPercentage = credits > 0 ? (creditsRemaining / 50) * 100 : 0;
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
       <View style={styles.content}>
         <View style={styles.leftSection}>
-          <Zap size={18} color="#FF9500" fill="#FF9500" />
+          <Zap size={18} color="#f97315" fill="#f97315" />
           <Text style={styles.creditsText}>
-            {creditsRemaining} / {credits}
+            {creditsRemaining} credits
           </Text>
         </View>
 
@@ -82,11 +82,11 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 3,
   },
   upgradeButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -95,5 +95,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#000000',
+    textAlign: 'center',
   },
 });

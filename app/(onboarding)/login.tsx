@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabase';
 import * as SecureStore from 'expo-secure-store';
 
 export default function LoginScreen() {
@@ -107,7 +107,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FF9500', '#FF6B6B']}
+        colors={['#f97315', '#FF6B6B']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.topSection}
@@ -197,7 +197,7 @@ export default function LoginScreen() {
               disabled={loading}
             >
               <LinearGradient
-                colors={['#FF9500', '#FF6B6B']}
+                colors={['#f97315', '#FF6B6B']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.loginButtonGradient}
@@ -315,8 +315,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxChecked: {
-    borderColor: '#FF9500',
-    backgroundColor: '#FF9500',
+    borderColor: '#f97315',
+    backgroundColor: '#f97315',
   },
   checkboxInner: {
     width: 10,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
     fontFamily: 'System',
   },
   loginButton: {
@@ -373,14 +373,14 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#FF9500',
+    borderColor: '#f97315',
     paddingVertical: 16,
     alignItems: 'center',
   },
   secondaryButtonText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
     fontFamily: 'System',
   },
   errorContainer: {

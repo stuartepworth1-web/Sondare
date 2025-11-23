@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { ChevronLeft, Bell, Zap, Sparkles, TrendingUp } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { supabase } from '../../../lib/supabase';
 
 export default function NotificationsSettings() {
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -16,12 +18,65 @@ export default function NotificationsSettings() {
   const [aiGeneration, setAiGeneration] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
   const [marketing, setMarketing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('push_notifications_enabled, project_updates_enabled, ai_generation_notifications, weekly_digest_enabled, marketing_emails_enabled')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        setPushEnabled(profile.push_notifications_enabled ?? true);
+        setProjectUpdates(profile.project_updates_enabled ?? true);
+        setAiGeneration(profile.ai_generation_notifications ?? true);
+        setWeeklyDigest(profile.weekly_digest_enabled ?? false);
+        setMarketing(profile.marketing_emails_enabled ?? false);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSetting = async (field: string, value: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from('user_profiles')
+        .update({ [field]: value })
+        .eq('id', user.id);
+    } catch (error) {
+      console.error('Error updating setting:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#f97315" />
+        <Text style={styles.loadingText}>Loading settings...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={28} color="#FF9500" />
+          <ChevronLeft size={28} color="#f97315" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={styles.headerSpacer} />
@@ -38,7 +93,7 @@ export default function NotificationsSettings() {
         <View style={styles.settingsGroup}>
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: '#FF9500' }]}>
+              <View style={[styles.settingIcon, { backgroundColor: '#f97315' }]}>
                 <Bell size={20} color="#000000" />
               </View>
               <View style={styles.settingTextGroup}>
@@ -50,8 +105,11 @@ export default function NotificationsSettings() {
             </View>
             <Switch
               value={pushEnabled}
-              onValueChange={setPushEnabled}
-              trackColor={{ false: '#38383A', true: '#FF9500' }}
+              onValueChange={(value) => {
+                setPushEnabled(value);
+                updateSetting('push_notifications_enabled', value);
+              }}
+              trackColor={{ false: '#38383A', true: '#f97315' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -70,8 +128,11 @@ export default function NotificationsSettings() {
             </View>
             <Switch
               value={projectUpdates}
-              onValueChange={setProjectUpdates}
-              trackColor={{ false: '#38383A', true: '#FF9500' }}
+              onValueChange={(value) => {
+                setProjectUpdates(value);
+                updateSetting('project_updates_enabled', value);
+              }}
+              trackColor={{ false: '#38383A', true: '#f97315' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -90,8 +151,11 @@ export default function NotificationsSettings() {
             </View>
             <Switch
               value={aiGeneration}
-              onValueChange={setAiGeneration}
-              trackColor={{ false: '#38383A', true: '#FF9500' }}
+              onValueChange={(value) => {
+                setAiGeneration(value);
+                updateSetting('ai_generation_notifications', value);
+              }}
+              trackColor={{ false: '#38383A', true: '#f97315' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -119,8 +183,11 @@ export default function NotificationsSettings() {
             </View>
             <Switch
               value={weeklyDigest}
-              onValueChange={setWeeklyDigest}
-              trackColor={{ false: '#38383A', true: '#FF9500' }}
+              onValueChange={(value) => {
+                setWeeklyDigest(value);
+                updateSetting('weekly_digest_enabled', value);
+              }}
+              trackColor={{ false: '#38383A', true: '#f97315' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -139,8 +206,11 @@ export default function NotificationsSettings() {
             </View>
             <Switch
               value={marketing}
-              onValueChange={setMarketing}
-              trackColor={{ false: '#38383A', true: '#FF9500' }}
+              onValueChange={(value) => {
+                setMarketing(value);
+                updateSetting('marketing_emails_enabled', value);
+              }}
+              trackColor={{ false: '#38383A', true: '#f97315' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -241,5 +311,14 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 32,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#8E8E93',
   },
 });

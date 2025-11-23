@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { CreditsProvider } from '@/contexts/CreditsContext';
+import { useFrameworkReady } from '../hooks/useFrameworkReady';
+import { CreditsProvider } from '../contexts/CreditsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 

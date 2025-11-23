@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Send, Zap, Target, Smartphone } from 'lucide-react-native';
-import { CreditsBar } from '@/components/CreditsBar';
-import { useCredits } from '@/contexts/CreditsContext';
-import { UpgradeModalIAP } from '@/components/UpgradeModalIAP';
+import { CreditsBar } from '../../components/CreditsBar';
+import { useCredits } from '../../contexts/CreditsContext';
+import { UpgradeModalIAP } from '../../components/UpgradeModalIAP';
+import { OnboardingTutorial } from '../../components/OnboardingTutorial';
 import { router } from 'expo-router';
+import { supabase } from '../../lib/supabase';
 
 interface AppIdea {
   id: string;
@@ -25,12 +27,40 @@ interface AppIdea {
 }
 
 export default function IdeasScreen() {
-  const { credits, creditsUsed, currentTier, refreshSubscriptionStatus } = useCredits();
+  const { credits, profile, refreshProfile } = useCredits();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [ideas, setIdeas] = useState<AppIdea[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, [profile]);
+
+  const checkOnboardingStatus = async () => {
+    if (profile && !profile.onboarding_completed) {
+      setTimeout(() => setShowOnboarding(true), 500);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from('user_profiles')
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      await refreshProfile();
+    }
+  };
 
   const sampleIdeas: AppIdea[] = [
     {
@@ -78,7 +108,7 @@ export default function IdeasScreen() {
   const getComplexityColor = (complexity: string) => {
     switch (complexity) {
       case 'Simple': return '#30D158';
-      case 'Medium': return '#FF9500';
+      case 'Medium': return '#f97315';
       case 'Complex': return '#FF453A';
       default: return '#8E8E93';
     }
@@ -93,7 +123,7 @@ export default function IdeasScreen() {
     >
       <CreditsBar
         credits={credits}
-        creditsUsed={creditsUsed}
+        creditsUsed={profile?.total_credits_spent ?? 0}
         onUpgrade={() => setShowUpgradeModal(true)}
       />
       <View style={styles.header}>
@@ -145,7 +175,7 @@ export default function IdeasScreen() {
               <View key={idea.id} style={styles.ideaCard}>
                 <View style={styles.ideaHeader}>
                   <View style={styles.ideaTitleSection}>
-                    <Smartphone size={24} color="#FF9500" />
+                    <Smartphone size={24} color="#f97315" />
                     <Text style={styles.ideaTitle}>{idea.title}</Text>
                   </View>
                   <View style={[styles.complexityBadge, { backgroundColor: getComplexityColor(idea.complexity) }]}>
@@ -158,7 +188,7 @@ export default function IdeasScreen() {
                   <Text style={styles.featuresTitle}>Key Features</Text>
                   {idea.features.map((feature, index) => (
                     <View key={index} style={styles.featureItem}>
-                      <Target size={16} color="#FF9500" />
+                      <Target size={16} color="#f97315" />
                       <Text style={styles.featureText}>{feature}</Text>
                     </View>
                   ))}
@@ -179,10 +209,13 @@ export default function IdeasScreen() {
       <UpgradeModalIAP
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        currentTier={currentTier}
-        onUpgradeSuccess={async () => {
-          await refreshSubscriptionStatus();
-        }}
+        currentTier={'free' as any}
+        onUpgradeSuccess={async () => {}}
+      />
+
+      <OnboardingTutorial
+        visible={showOnboarding}
+        onComplete={handleOnboardingComplete}
       />
     </LinearGradient>
   );
@@ -255,7 +288,7 @@ const styles = StyleSheet.create({
     minHeight: 88,
   },
   generateButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -330,7 +363,7 @@ const styles = StyleSheet.create({
   ideaCategory: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
     fontFamily: 'System',
     letterSpacing: -0.08,
     marginBottom: 12,
@@ -360,7 +393,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   buildButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,

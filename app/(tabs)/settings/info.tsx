@@ -19,7 +19,7 @@ export default function AppInfo() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={28} color="#FF9500" />
+          <ChevronLeft size={28} color="#f97315" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>App Information</Text>
         <View style={styles.headerSpacer} />
@@ -28,7 +28,7 @@ export default function AppInfo() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.appSection}>
           <View style={styles.appIcon}>
-            <Code size={48} color="#FF9500" />
+            <Code size={48} color="#f97315" />
           </View>
           <Text style={styles.appName}>AI App Builder</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
@@ -99,7 +99,7 @@ export default function AppInfo() {
             onPress={() => handleLinkPress('mailto:support@example.com')}
           >
             <View style={styles.linkLeft}>
-              <View style={[styles.linkIcon, { backgroundColor: '#FF9500' }]}>
+              <View style={[styles.linkIcon, { backgroundColor: '#f97315' }]}>
                 <Mail size={20} color="#000000" />
               </View>
               <Text style={styles.linkText}>Contact Support</Text>
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   appVersion: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#f97315',
     marginBottom: 16,
   },
   appDescription: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     marginTop: 7,
     marginRight: 12,
   },

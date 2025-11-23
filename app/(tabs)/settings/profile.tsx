@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,49 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { ChevronLeft, Camera, Save, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 export default function ProfileSettings() {
-  const [name, setName] = useState('John Doe');
-  const [email, setEmail] = useState('john@example.com');
-  const [bio, setBio] = useState('Building amazing apps with AI');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [bio, setBio] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setEmail(user.email || '');
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('full_name, bio, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        setName(profile.full_name || '');
+        setBio(profile.bio || '');
+        setAvatar(profile.avatar_url);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -33,8 +65,37 @@ export default function ProfileSettings() {
     }
   };
 
-  const handleSave = () => {
-    router.back();
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter your name');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: name.trim(),
+          bio: bio.trim(),
+          avatar_url: avatar,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -74,11 +135,20 @@ export default function ProfileSettings() {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#f97315" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={28} color="#FF9500" />
+          <ChevronLeft size={28} color="#f97315" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile Settings</Text>
         <View style={styles.headerSpacer} />
@@ -138,9 +208,22 @@ export default function ProfileSettings() {
             />
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Save size={20} color="#000000" />
-            <Text style={styles.saveButtonText}>Save Changes</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <ActivityIndicator size="small" color="#000000" />
+                <Text style={styles.saveButtonText}>Saving...</Text>
+              </>
+            ) : (
+              <>
+                <Save size={20} color="#000000" />
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -220,7 +303,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -258,7 +341,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#f97315',
     borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -267,11 +350,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 8,
   },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
   saveButtonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#000000',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#8E8E93',
   },
   dangerZone: {
     padding: 16,

@@ -39,7 +39,7 @@ const slides: OnboardingSlide[] = [
     icon: <Palette size={64} color="#FFFFFF" />,
     title: 'Design Visually',
     subtitle: 'Create stunning interfaces with our Canva-like drag and drop designer',
-    gradient: ['#FF9500', '#FFB84D'],
+    gradient: ['#f97315', '#FFB84D'],
   },
 ];
 

@@ -14,7 +14,7 @@ export default function TermsOfService() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={28} color="#FF9500" />
+          <ChevronLeft size={28} color="#f97315" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Terms of Use</Text>
         <View style={styles.headerSpacer} />
