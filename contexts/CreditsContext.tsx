@@ -101,7 +101,12 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
 export function useCredits() {
   const context = useContext(CreditsContext);
   if (context === undefined) {
-    throw new Error('useCredits must be used within a CreditsProvider');
+    return {
+      credits: 0,
+      profile: null,
+      isLoading: false,
+      refreshProfile: async () => {},
+    };
   }
   return context;
 }
