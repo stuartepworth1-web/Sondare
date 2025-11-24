@@ -1,10 +1,26 @@
-import { useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '../hooks/useFrameworkReady';
 import { CreditsProvider } from '../contexts/CreditsContext';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Alert } from 'react-native';
+import { ErrorUtils } from 'react-native';
+
+if (ErrorUtils) {
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error('GLOBAL ERROR HANDLER:', error, 'isFatal:', isFatal);
+    Alert.alert(
+      'App Error',
+      `${error.name}: ${error.message}\n\nStack: ${error.stack?.substring(0, 200)}`,
+      [{ text: 'OK' }]
+    );
+    if (originalHandler) {
+      originalHandler(error, isFatal);
+    }
+  });
+}
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -39,6 +55,63 @@ class ErrorBoundary extends Component<
 
 export default function RootLayout() {
   useFrameworkReady();
+
+  const [appReady, setAppReady] = React.useState(false);
+  const [appError, setAppError] = React.useState<string | null>(null);
+
+  useEffect(() => {
+    async function initApp() {
+      try {
+        const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error('Missing Supabase configuration');
+        }
+
+        setAppReady(true);
+      } catch (error: any) {
+        console.error('App initialization error:', error);
+        setAppError(error.message || 'Failed to initialize');
+        setAppReady(true);
+      }
+    }
+
+    initApp();
+  }, []);
+
+  if (!appReady) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#1C1C1E', '#000000']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorDetails}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (appError) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#1C1C1E', '#000000']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Configuration Error</Text>
+          <Text style={styles.errorDetails}>{appError}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <ErrorBoundary>
