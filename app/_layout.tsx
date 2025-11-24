@@ -1,126 +1,89 @@
-import { Tabs } from 'expo-router';
-import { Code, Lightbulb, Palette, Settings, FolderOpen } from 'lucide-react-native';
-import { StyleSheet, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useFrameworkReady } from '../hooks/useFrameworkReady';
+import { CreditsProvider } from '../contexts/CreditsContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, View, Text } from 'react-native';
 
-export default function TabLayout() {
-  const insets = useSafeAreaInsets();
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('App Error Boundary caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Something went wrong</Text>
+          <Text style={styles.errorDetails}>{this.state.error?.message}</Text>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default function RootLayout() {
+  useFrameworkReady();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#f97315',
-        tabBarInactiveTintColor: '#8E8E93',
-        tabBarStyle: {
-          ...styles.tabBar,
-          height: 85,
-          paddingBottom: Math.max(insets.bottom, 20),
-          paddingTop: 10,
-        },
-        tabBarLabelStyle: styles.tabBarLabel,
-        tabBarItemStyle: styles.tabBarItem,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Ideas',
-          tabBarIcon: ({ size, color }) => (
-            <Lightbulb size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="builder"
-        options={{
-          title: 'Builder',
-          tabBarIcon: ({ size, color }) => (
-            <Code size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="design"
-        options={{
-          title: 'Design',
-          tabBarIcon: ({ size, color }) => (
-            <Palette size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="projects"
-        options={{
-          title: 'Projects',
-          tabBarIcon: ({ size, color }) => (
-            <FolderOpen size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ size, color }) => (
-            <Settings size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings/profile"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/notifications"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/info"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/terms"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/privacy"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="projects/[id]"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+    <ErrorBoundary>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#1C1C1E', '#000000']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <CreditsProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="light" />
+        </CreditsProvider>
+      </View>
+    </ErrorBoundary>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
+  container: {
+    flex: 1,
     backgroundColor: '#000000',
-    borderTopWidth: 1,
-    borderTopColor: '#333333',
   },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'System',
-    marginTop: 4,
-    marginBottom: 0,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    padding: 20,
   },
-  tabBarItem: {
-    paddingTop: 6,
-    paddingBottom: 4,
+  errorText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FF0000',
+    marginBottom: 16,
+  },
+  errorDetails: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
 });
