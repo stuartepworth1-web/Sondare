@@ -13,8 +13,13 @@ export default function Index() {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Session error:', error);
+        setIsAuthenticated(false);
+      } else {
+        setIsAuthenticated(!!session);
+      }
     } catch (error) {
       console.error('Auth check error:', error);
       setIsAuthenticated(false);
