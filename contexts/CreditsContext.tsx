@@ -46,19 +46,24 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
           await loadProfile();
         }
 
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (!mounted) return;
+        try {
+          const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (!mounted) return;
 
-          if (event === 'SIGNED_IN') {
-            loadProfile().catch(err => console.error('Auth state change error:', err));
-          } else if (event === 'SIGNED_OUT') {
-            setProfile(null);
-          }
-        });
+            if (event === 'SIGNED_IN') {
+              loadProfile().catch(err => console.error('Auth state change error:', err));
+            } else if (event === 'SIGNED_OUT') {
+              setProfile(null);
+            }
+          });
 
-        authSubscription = authListener.subscription;
+          authSubscription = authListener.subscription;
+        } catch (authError) {
+          console.error('Auth listener setup error:', authError);
+        }
       } catch (error) {
         console.error('CreditsProvider initialization error:', error);
+      } finally {
         if (mounted) {
           setIsLoading(false);
         }
@@ -69,8 +74,12 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      if (authSubscription) {
-        authSubscription.unsubscribe();
+      try {
+        if (authSubscription) {
+          authSubscription.unsubscribe();
+        }
+      } catch (error) {
+        console.error('Cleanup error:', error);
       }
     };
   }, []);
