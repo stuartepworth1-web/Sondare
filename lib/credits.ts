@@ -27,21 +27,26 @@ export interface UserProfile {
 }
 
 export async function getUserProfile(): Promise<UserProfile | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
 
-  if (error) {
-    console.error('Error fetching profile:', error);
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Unexpected error in getUserProfile:', error);
     return null;
   }
-
-  return data;
 }
 
 export async function getCreditsRemaining(): Promise<number> {
