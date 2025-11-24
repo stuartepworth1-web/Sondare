@@ -5,21 +5,29 @@ import { useFrameworkReady } from '../hooks/useFrameworkReady';
 import { CreditsProvider } from '../contexts/CreditsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View, Text, Alert } from 'react-native';
-import { ErrorUtils } from 'react-native';
 
-if (ErrorUtils) {
-  const originalHandler = ErrorUtils.getGlobalHandler();
-  ErrorUtils.setGlobalHandler((error, isFatal) => {
-    console.error('GLOBAL ERROR HANDLER:', error, 'isFatal:', isFatal);
-    Alert.alert(
-      'App Error',
-      `${error.name}: ${error.message}\n\nStack: ${error.stack?.substring(0, 200)}`,
-      [{ text: 'OK' }]
-    );
-    if (originalHandler) {
-      originalHandler(error, isFatal);
-    }
-  });
+try {
+  const ErrorUtils = (global as any).ErrorUtils;
+  if (ErrorUtils) {
+    const originalHandler = ErrorUtils.getGlobalHandler();
+    ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+      console.error('GLOBAL ERROR HANDLER:', error, 'isFatal:', isFatal);
+      try {
+        Alert.alert(
+          'App Error',
+          `${error.name}: ${error.message}\n\nStack: ${error.stack?.substring(0, 200)}`,
+          [{ text: 'OK' }]
+        );
+      } catch (alertError) {
+        console.error('Failed to show alert:', alertError);
+      }
+      if (originalHandler) {
+        originalHandler(error, isFatal);
+      }
+    });
+  }
+} catch (setupError) {
+  console.error('Failed to setup error handler:', setupError);
 }
 
 class ErrorBoundary extends Component<
