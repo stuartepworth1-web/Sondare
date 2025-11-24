@@ -22,28 +22,56 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
       setProfile(userProfile);
     } catch (error) {
       console.error('Error loading profile:', error);
+      setProfile(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const refreshProfile = async () => {
-    await loadProfile();
+    try {
+      await loadProfile();
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
   };
 
   useEffect(() => {
-    loadProfile();
+    let mounted = true;
+    let authSubscription: any = null;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        loadProfile();
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
+    const init = async () => {
+      try {
+        if (mounted) {
+          await loadProfile();
+        }
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          if (!mounted) return;
+
+          if (event === 'SIGNED_IN') {
+            loadProfile().catch(err => console.error('Auth state change error:', err));
+          } else if (event === 'SIGNED_OUT') {
+            setProfile(null);
+          }
+        });
+
+        authSubscription = authListener.subscription;
+      } catch (error) {
+        console.error('CreditsProvider initialization error:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-    });
+    };
+
+    init();
 
     return () => {
-      authListener.subscription.unsubscribe();
+      mounted = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
     };
   }, []);
 
