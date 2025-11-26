@@ -2,11 +2,13 @@ import { Tabs } from 'expo-router';
 import { Code, Lightbulb, Palette, Settings, FolderOpen } from 'lucide-react-native';
 import { StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CreditsProvider } from '@/contexts/CreditsContext';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
   return (
+    <CreditsProvider>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -103,6 +105,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </CreditsProvider>
   );
 }
 
