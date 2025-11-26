@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, InteractionManager } from 'react-native';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    checkAuth();
+    const timer = setTimeout(() => {
+      InteractionManager.runAfterInteractions(() => {
+        checkAuth();
+      });
+    }, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   const checkAuth = async () => {
