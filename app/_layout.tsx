@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '../hooks/useFrameworkReady';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, View, Text, Alert } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
 
 try {
   const ErrorUtils = (global as any).ErrorUtils;
@@ -11,15 +11,6 @@ try {
     const originalHandler = ErrorUtils.getGlobalHandler();
     ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
       console.error('GLOBAL ERROR HANDLER:', error, 'isFatal:', isFatal);
-      try {
-        Alert.alert(
-          'App Error',
-          `${error.name}: ${error.message}\n\nStack: ${error.stack?.substring(0, 200)}`,
-          [{ text: 'OK' }]
-        );
-      } catch (alertError) {
-        console.error('Failed to show alert:', alertError);
-      }
       if (originalHandler) {
         originalHandler(error, isFatal);
       }
@@ -89,13 +80,7 @@ export default function RootLayout() {
 
   if (!appReady) {
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={['#1C1C1E', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      <View style={[styles.container, { backgroundColor: '#000000' }]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorDetails}>Loading...</Text>
         </View>
@@ -105,13 +90,7 @@ export default function RootLayout() {
 
   if (appError) {
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={['#1C1C1E', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      <View style={[styles.container, { backgroundColor: '#000000' }]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Configuration Error</Text>
           <Text style={styles.errorDetails}>{appError}</Text>
