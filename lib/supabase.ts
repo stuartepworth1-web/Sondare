@@ -1,6 +1,12 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
+try {
+  require('react-native-url-polyfill/auto');
+} catch (error) {
+  console.warn('URL polyfill import failed:', error);
+}
+
 let supabaseInstance: SupabaseClient | null = null;
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -15,8 +21,13 @@ const ExpoSecureStoreAdapter = {
         }
         return localStorage.getItem(key);
       }
-      const SecureStore = require('expo-secure-store');
-      return await SecureStore.getItemAsync(key);
+      try {
+        const SecureStore = require('expo-secure-store');
+        return await SecureStore.getItemAsync(key);
+      } catch (requireError) {
+        console.error('SecureStore not available:', requireError);
+        return null;
+      }
     } catch (error) {
       console.error('Storage getItem error:', error);
       return null;
@@ -30,8 +41,12 @@ const ExpoSecureStoreAdapter = {
         }
         return;
       }
-      const SecureStore = require('expo-secure-store');
-      await SecureStore.setItemAsync(key, value);
+      try {
+        const SecureStore = require('expo-secure-store');
+        await SecureStore.setItemAsync(key, value);
+      } catch (requireError) {
+        console.error('SecureStore not available:', requireError);
+      }
     } catch (error) {
       console.error('Storage setItem error:', error);
     }
@@ -44,8 +59,12 @@ const ExpoSecureStoreAdapter = {
         }
         return;
       }
-      const SecureStore = require('expo-secure-store');
-      await SecureStore.deleteItemAsync(key);
+      try {
+        const SecureStore = require('expo-secure-store');
+        await SecureStore.deleteItemAsync(key);
+      } catch (requireError) {
+        console.error('SecureStore not available:', requireError);
+      }
     } catch (error) {
       console.error('Storage removeItem error:', error);
     }
@@ -55,12 +74,6 @@ const ExpoSecureStoreAdapter = {
 function createSupabaseClient(): SupabaseClient {
   if (supabaseInstance) {
     return supabaseInstance;
-  }
-
-  try {
-    require('react-native-url-polyfill/auto');
-  } catch (error) {
-    console.error('URL polyfill error:', error);
   }
 
   try {
