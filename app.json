@@ -13,7 +13,10 @@
       "bundleIdentifier": "com.sondare.app",
       "buildNumber": "29392655",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to scan and capture property details for surveys.",
+        "NSCameraUsageDescription": "This app uses the camera to scan and capture content.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images.",
+        "NSPhotoLibraryAddUsageDescription": "This app saves images to your photo library.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for audio recording.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
