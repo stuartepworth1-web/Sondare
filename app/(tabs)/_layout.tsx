@@ -1,27 +1,16 @@
 import { Tabs } from 'expo-router';
-import { Code, Lightbulb, Palette, Settings, FolderOpen } from 'lucide-react-native';
-import { StyleSheet, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CreditsProvider } from '@/contexts/CreditsContext';
+import { Code, Lightbulb, Palette, Settings } from 'lucide-react-native';
+import { StyleSheet } from 'react-native';
 
 export default function TabLayout() {
-  const insets = useSafeAreaInsets();
-
   return (
-    <CreditsProvider>
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#f97315',
+        tabBarActiveTintColor: '#FF9500',
         tabBarInactiveTintColor: '#8E8E93',
-        tabBarStyle: {
-          ...styles.tabBar,
-          height: 85,
-          paddingBottom: Math.max(insets.bottom, 20),
-          paddingTop: 10,
-        },
+        tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
-        tabBarItemStyle: styles.tabBarItem,
       }}>
       <Tabs.Screen
         name="index"
@@ -55,57 +44,11 @@ export default function TabLayout() {
         options={{
           title: 'Projects',
           tabBarIcon: ({ size, color }) => (
-            <FolderOpen size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ size, color }) => (
             <Settings size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="settings/profile"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/notifications"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/info"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/terms"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/privacy"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="projects/[id]"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
-    </CreditsProvider>
   );
 }
 
@@ -114,16 +57,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     borderTopWidth: 1,
     borderTopColor: '#333333',
+    height: 90,
+    paddingTop: 10,
+    paddingBottom: 30,
   },
   tabBarLabel: {
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'System',
     marginTop: 4,
-    marginBottom: 0,
-  },
-  tabBarItem: {
-    paddingTop: 6,
-    paddingBottom: 4,
   },
 });
