@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 5.9.1"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "ios": {
+        "appleTeamId": "L8UL93UKHN"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "stuartepworth1@gmail.com",
+        "ascAppId": "6754073121",
+        "appleTeamId": "L8UL93UKHN"
+      }
+    }
+  }
+}
