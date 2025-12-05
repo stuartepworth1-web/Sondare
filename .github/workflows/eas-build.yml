@@ -36,6 +36,8 @@ jobs:
 
       - name: Build and Submit iOS
         run: eas build --platform ios --non-interactive --profile production --auto-submit
+        env:
+          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
 
       - name: Build Android
         run: eas build --platform android --non-interactive --profile production
