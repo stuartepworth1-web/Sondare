@@ -7,7 +7,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.stuartepworth.sondare
+        bundle_identifier: com.sondare.app
       xcode: latest
       cocoapods: default
       vars:
@@ -56,7 +56,7 @@ workflows:
       - name: Set build number
         script: |
           cd android && ./gradlew bundleRelease \
-            -PversionCode=$(($(google-play get-latest-build-number --package-name "com.stuartepworth.sondare") + 1))
+            -PversionCode=$(($(google-play get-latest-build-number --package-name "com.sondare.app") + 1))
       - name: Build Android
         script: |
           cd android && ./gradlew bundleRelease
