@@ -25,37 +25,11 @@ workflows:
       - name: Set build number
         script: |
           cd ios && agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
-      - name: Get Team ID
-        script: |
-          export TEAM_ID=$(app-store-connect get-team-id)
-          echo "TEAM_ID=$TEAM_ID" >> $CM_ENV
-      - name: Create export options
-        script: |
-          cat > /Users/builder/export_options.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>uploadBitcode</key>
-              <false/>
-              <key>uploadSymbols</key>
-              <true/>
-              <key>signingStyle</key>
-              <string>automatic</string>
-              <key>teamID</key>
-              <string>\$TEAM_ID</string>
-          </dict>
-          </plist>
-          EOF
       - name: Build iOS
         script: |
           xcode-project build-ipa \
             --workspace ios/sondare.xcworkspace \
-            --scheme sondare \
-            --archive-flags="-allowProvisioningUpdates DEVELOPMENT_TEAM=$TEAM_ID CODE_SIGN_STYLE=Automatic" \
-            --export-options-plist /Users/builder/export_options.plist
+            --scheme sondare
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
