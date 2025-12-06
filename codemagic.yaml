@@ -2,8 +2,6 @@ workflows:
   ios-release:
     name: iOS Release
     max_build_duration: 60
-    integrations:
-      app_store_connect: codemagic
     environment:
       ios_signing:
         distribution_type: app_store
@@ -13,6 +11,9 @@ workflows:
       vars:
         EXPO_TOKEN: $EXPO_TOKEN
         APP_STORE_ID: $APP_STORE_ID
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
       node: 18.20.5
     scripts:
       - name: Install dependencies
@@ -34,7 +35,9 @@ workflows:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
 
   android-release:
