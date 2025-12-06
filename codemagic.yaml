@@ -1,127 +1,62 @@
 workflows:
-  ios-workflow:
-    name: iOS Workflow
-    max_build_duration: 120
-    instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: Sondare
+  ios-release:
+    name: iOS Release
+    max_build_duration: 60
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.sondare.app
+        bundle_identifier: com.stuartepworth.sondare
       vars:
-        BUNDLE_ID: "com.sondare.app"
-        APP_STORE_APPLE_ID: 6754073121
-        EXPO_PUBLIC_SUPABASE_URL: "https://qplimwowezrqupzxkuio.supabase.co"
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwbGltd293ZXpycXVwenhrdWlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTU0NDUsImV4cCI6MjA3ODc3MTQ0NX0.4DbMHNyYSY0hmn9YIUAObRwDjOioiRvB__E3eStGVX4"
-        EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY: "appl_TuLeoFXZpIlCzJVsyUfRWynNCBJ"
-        CLAUDE_API_KEY: "sk-ant-api03-fKgvz_dB_SHSFygZfxJUKaQUUmMjsVST7LvC_ydgi-T×8zkQ73TfaAQxyimLtwZOPLpKpQXBTOb7A05M3RzHXg-goWvegAA"
-      node: 20
-      xcode: latest
+        EXPO_TOKEN: $EXPO_TOKEN
+      node: 18.20.5
     scripts:
-      - name: Verify working directory
-        script: |
-          echo "=== Working Directory ==="
-          pwd
-          echo "=== Project Root Files ==="
-          ls -la
-          echo "=== Checking for app.json ==="
-          if [ ! -f "app.json" ]; then
-            echo "ERROR: app.json not found in current directory!"
-            exit 1
-          fi
-          echo "✅ Correct project root detected"
-
-      - name: Create .env file
-        script: |
-          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
-          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
-          echo "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=$EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY" >> .env
-          echo "CLAUDE_API_KEY=$CLAUDE_API_KEY" >> .env
-          cat .env
-
       - name: Install dependencies
         script: |
-          npm install --legacy-peer-deps
-
-      - name: Install Expo CLI
-        script: |
-          npm install -g expo-cli @expo/ngrok
-
-      - name: Verify package.json and clear caches
-        script: |
-          echo "=== Package name from package.json ==="
-          cat package.json | grep '"name"'
-          echo "=== App name from app.json ==="
-          cat app.json | grep -A1 '"name"'
-          rm -rf ios android .expo node_modules/.cache
-
-      - name: Prebuild iOS project
+          npm ci
+      - name: Expo prebuild
         script: |
           npx expo prebuild --platform ios --clean
-          echo "=== Verifying created iOS project ==="
-          ls -la ios/
-          find ios -name "*.xcodeproj" -type d
-
-      - name: Set up code signing settings on Xcode project
+      - name: Set build number
         script: |
-          xcode-project use-profiles --warn-only
-
-      - name: Install CocoaPods dependencies
+          cd ios && agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
+      - name: Build iOS
         script: |
-          cd ios
-          pod repo update
-          pod install --repo-update
-          cd ..
-          WORKSPACE=$(find ios -maxdepth 1 -name "*.xcworkspace" -type d | head -1)
-          if [ -z "$WORKSPACE" ]; then
-            echo "ERROR: No workspace was created"
-            exit 1
-          fi
-          echo "Workspace created: $WORKSPACE"
-          echo "WORKSPACE_PATH=$WORKSPACE" >> $CM_ENV
-
-      - name: Increment build number
-        script: |
-          XCODEPROJ=$(find ios -name "*.xcodeproj" -type d | head -1)
-          cd "$XCODEPROJ/.."
-          # Get current build number
-          CURRENT_BUILD=$(agvtool what-version -terse)
-          # Generate timestamp-based build number
-          TIMESTAMP_BUILD=$(($(date +%s) / 60))
-          # Use the higher of the two to ensure we always increment
-          if [ $TIMESTAMP_BUILD -le $CURRENT_BUILD ]; then
-            NEW_BUILD_NUMBER=$((CURRENT_BUILD + 1))
-          else
-            NEW_BUILD_NUMBER=$TIMESTAMP_BUILD
-          fi
-          echo "Current build number: $CURRENT_BUILD"
-          echo "Timestamp build number: $TIMESTAMP_BUILD"
-          echo "Setting build number to: $NEW_BUILD_NUMBER"
-          agvtool new-version -all $NEW_BUILD_NUMBER
-
-      - name: Build iOS app
-        script: |
-          SCHEME=$(basename "$WORKSPACE_PATH" .xcworkspace)
-          echo "Building workspace: $WORKSPACE_PATH with scheme: $SCHEME"
           xcode-project build-ipa \
-            --workspace "$WORKSPACE_PATH" \
-            --scheme "$SCHEME"
-
+            --workspace ios/sondare.xcworkspace \
+            --scheme sondare
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-
     publishing:
-      email:
-        recipients:
-          - stuart@sondare.me
-        notify:
-          success: true
-          failure: true
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        beta_groups:
-          - App Store Connect Users
-        submit_to_app_store: false
+
+  android-release:
+    name: Android Release
+    max_build_duration: 60
+    environment:
+      android_signing:
+        - keystore_reference
+      vars:
+        EXPO_TOKEN: $EXPO_TOKEN
+      node: 18.20.5
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+      - name: Expo prebuild
+        script: |
+          npx expo prebuild --platform android --clean
+      - name: Set build number
+        script: |
+          cd android && ./gradlew bundleRelease \
+            -PversionCode=$(($(google-play get-latest-build-number --package-name "com.stuartepworth.sondare") + 1))
+      - name: Build Android
+        script: |
+          cd android && ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
