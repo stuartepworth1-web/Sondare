@@ -30,7 +30,8 @@ workflows:
           xcode-project build-ipa \
             --workspace ios/sondare.xcworkspace \
             --scheme sondare \
-            --archive-flags="-allowProvisioningUpdates"
+            --archive-flags="-allowProvisioningUpdates" \
+            --export-method app-store
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
