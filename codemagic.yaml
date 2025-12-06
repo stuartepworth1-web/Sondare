@@ -8,8 +8,11 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.stuartepworth.sondare
+      xcode: latest
+      cocoapods: default
       vars:
         EXPO_TOKEN: $EXPO_TOKEN
+        APP_STORE_ID: $APP_STORE_ID
       node: 18.20.5
     scripts:
       - name: Install dependencies
@@ -25,7 +28,8 @@ workflows:
         script: |
           xcode-project build-ipa \
             --workspace ios/sondare.xcworkspace \
-            --scheme sondare
+            --scheme sondare \
+            --archive-flags="-allowProvisioningUpdates"
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
