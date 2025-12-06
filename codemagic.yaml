@@ -14,7 +14,7 @@ workflows:
         APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
         APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
         APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
-      node: 18.20.5
+      node: 20.19.4
     scripts:
       - name: Install dependencies
         script: |
@@ -48,7 +48,7 @@ workflows:
         - keystore_reference
       vars:
         EXPO_TOKEN: $EXPO_TOKEN
-      node: 18.20.5
+      node: 20.19.4
     scripts:
       - name: Install dependencies
         script: |
