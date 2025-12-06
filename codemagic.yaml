@@ -50,7 +50,7 @@ workflows:
           xcode-project build-ipa \
             --workspace ios/sondare.xcworkspace \
             --scheme sondare \
-            --archive-flags="-allowProvisioningUpdates" \
+            --archive-flags="-allowProvisioningUpdates DEVELOPMENT_TEAM=$TEAM_ID CODE_SIGN_STYLE=Automatic" \
             --export-options-plist /Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
