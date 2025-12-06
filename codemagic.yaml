@@ -21,7 +21,7 @@ workflows:
           npm install
       - name: Prebuild iOS project
         script: |
-          npm exec expo prebuild -- --platform ios --clean
+          npm run prebuild:ios
       - name: Set build number
         script: |
           cd ios && agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
@@ -55,7 +55,7 @@ workflows:
           npm install
       - name: Prebuild Android project
         script: |
-          npm exec expo prebuild -- --platform android --clean
+          npm run prebuild:android
       - name: Set build number
         script: |
           cd android && ./gradlew bundleRelease \
