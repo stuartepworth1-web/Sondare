@@ -2,6 +2,8 @@ workflows:
   ios-release:
     name: iOS Release
     max_build_duration: 60
+    integrations:
+      app_store_connect: codemagic
     environment:
       ios_signing:
         distribution_type: app_store
@@ -12,10 +14,10 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          npm ci
-      - name: Expo prebuild
+          npm install
+      - name: Prebuild iOS project
         script: |
-          npx expo prebuild --platform ios --clean
+          npx expo prebuild --platform ios --clean --no-install
       - name: Set build number
         script: |
           cd ios && agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
@@ -43,10 +45,10 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          npm ci
-      - name: Expo prebuild
+          npm install
+      - name: Prebuild Android project
         script: |
-          npx expo prebuild --platform android --clean
+          npx expo prebuild --platform android --clean --no-install
       - name: Set build number
         script: |
           cd android && ./gradlew bundleRelease \
