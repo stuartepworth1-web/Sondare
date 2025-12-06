@@ -25,6 +25,10 @@ workflows:
       - name: Set build number
         script: |
           cd ios && agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
+      - name: Get Team ID
+        script: |
+          export TEAM_ID=$(app-store-connect get-team-id)
+          echo "TEAM_ID=$TEAM_ID" >> $CM_ENV
       - name: Create export options
         script: |
           cat > /Users/builder/export_options.plist << EOF
