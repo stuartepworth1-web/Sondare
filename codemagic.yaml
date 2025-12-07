@@ -21,6 +21,8 @@ workflows:
           npm install
       - name: Prebuild iOS project
         script: |
+          export EXPO_NO_DOTENV=1
+          export NODE_ENV=production
           npm run prebuild:ios
       - name: Create export options
         script: |
@@ -42,10 +44,16 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
+      - name: Configure build environment
+        script: |
+          echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
+          cat ios/.xcode.env.local
       - name: Build iOS
         script: |
           export EXPO_NO_DOTENV=1
           export NODE_ENV=production
+          export ENTRY_FILE=index.js
+          export SKIP_BUNDLING=0
           xcode-project build-ipa \
             --workspace ios/sondare.xcworkspace \
             --scheme sondare \
