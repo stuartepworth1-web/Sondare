@@ -39,9 +39,9 @@ workflows:
       - name: Set build number
         script: |
           cd ios && agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
-      - name: Configure automatic signing
+      - name: Apply provisioning profiles
         script: |
-          xcode-project use-profiles --automatic
+          xcode-project use-profiles
       - name: Build iOS
         script: |
           xcode-project build-ipa \
