@@ -44,9 +44,12 @@ workflows:
           xcode-project use-profiles
       - name: Build iOS
         script: |
+          export EXPO_NO_DOTENV=1
+          export NODE_ENV=production
           xcode-project build-ipa \
             --workspace ios/sondare.xcworkspace \
-            --scheme sondare
+            --scheme sondare \
+            --config Release
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
