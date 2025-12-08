@@ -44,6 +44,9 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
+      - name: Decode private key
+        script: |
+          echo $APP_STORE_CONNECT_PRIVATE_KEY | base64 --decode > /tmp/api_key.p8
       - name: Configure build environment
         script: |
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
@@ -62,7 +65,7 @@ workflows:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        api_key: /tmp/api_key.p8
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
