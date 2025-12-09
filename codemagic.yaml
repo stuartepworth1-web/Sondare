@@ -13,7 +13,7 @@ workflows:
         APP_STORE_ID: $APP_STORE_ID
         APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
         APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
+        APP_STORE_CONNECT_KEY_CONTENT: $APP_STORE_CONNECT_KEY_CONTENT
       node: 20.19.4
     scripts:
       - name: Install dependencies
@@ -46,16 +46,16 @@ workflows:
           xcode-project use-profiles
       - name: Decode private key
         script: |
-          echo "Checking APP_STORE_CONNECT_PRIVATE_KEY variable..."
-          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
-            echo "Error: APP_STORE_CONNECT_PRIVATE_KEY is not set or empty"
+          echo "Checking APP_STORE_CONNECT_KEY_CONTENT variable..."
+          if [ -z "$APP_STORE_CONNECT_KEY_CONTENT" ]; then
+            echo "Error: APP_STORE_CONNECT_KEY_CONTENT is not set or empty"
             echo "Available environment variables:"
             env | grep -i app_store || true
             exit 1
           fi
-          echo "Variable is set, length: ${#APP_STORE_CONNECT_PRIVATE_KEY}"
+          echo "Variable is set, length: ${#APP_STORE_CONNECT_KEY_CONTENT}"
           echo "Decoding private key..."
-          echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 -d > /tmp/api_key.p8
+          echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 -d > /tmp/api_key.p8
           if [ $? -eq 0 ]; then
             echo "Successfully decoded private key"
             ls -l /tmp/api_key.p8
