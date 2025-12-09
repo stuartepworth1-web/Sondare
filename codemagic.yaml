@@ -46,7 +46,11 @@ workflows:
           xcode-project use-profiles
       - name: Decode private key
         script: |
-          echo $APP_STORE_CONNECT_PRIVATE_KEY | base64 --decode > /tmp/api_key.p8
+          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "Error: APP_STORE_CONNECT_PRIVATE_KEY is not set"
+            exit 1
+          fi
+          echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode > /tmp/api_key.p8
       - name: Configure build environment
         script: |
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
