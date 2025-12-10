@@ -138,13 +138,24 @@ workflows:
             exit 1
           fi
 
+          # Verify the private key file exists and is readable
+          if [ ! -f /tmp/api_key.p8 ]; then
+            echo "✗ Private key file not found at /tmp/api_key.p8"
+            exit 1
+          fi
+
+          echo "Private key file found:"
+          ls -lh /tmp/api_key.p8
+          echo "First line:"
+          head -n 1 /tmp/api_key.p8
+
           echo "Publishing $IPA_PATH to TestFlight..."
 
           app-store-connect publish \
             --path "$IPA_PATH" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key /tmp/api_key.p8 \
+            --private-key @file:/tmp/api_key.p8 \
             --testflight
 
           echo "✓ Successfully published to TestFlight"
