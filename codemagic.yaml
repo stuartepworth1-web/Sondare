@@ -1,4 +1,4 @@
-workflows:
+ workflows:
   ios-release:
     name: iOS Release
     max_build_duration: 60
@@ -15,15 +15,43 @@ workflows:
         APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
         APP_STORE_CONNECT_KEY_CONTENT: $APP_STORE_CONNECT_KEY_CONTENT
       node: 20.19.4
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/CocoaPods
+        - $HOME/.cocoapods/repos
+        - ios/Pods
     scripts:
       - name: Install dependencies
         script: |
           npm install
       - name: Prebuild iOS project
         script: |
+          set -e
           export EXPO_NO_DOTENV=1
           export NODE_ENV=production
-          npm run prebuild:ios
+
+          echo "Starting Expo prebuild..."
+
+          # Run prebuild without pod install first
+          npx expo prebuild --platform ios --clean --no-install
+
+          echo "✓ Prebuild completed, now installing pods..."
+      - name: Install CocoaPods dependencies
+        script: |
+          set -e
+          cd ios
+
+          echo "Installing pods..."
+          pod install --repo-update
+
+          if [ -d "Pods" ]; then
+            echo "✓ CocoaPods installation completed successfully"
+            echo "Installed pods:"
+            ls -la Pods/ | head -20
+          else
+            echo "✗ Pods directory not created"
+            exit 1
+          fi
       - name: Create export options
         script: |
           cat > /Users/builder/export_options.plist << 'EOF'
