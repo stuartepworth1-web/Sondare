@@ -13,7 +13,6 @@ workflows:
         APP_STORE_ID: $APP_STORE_ID
         APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
         APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        APP_STORE_CONNECT_KEY_CONTENT: $APP_STORE_CONNECT_KEY_CONTENT
       node: 20.19.4
     scripts:
       - name: Install dependencies
@@ -46,21 +45,31 @@ workflows:
           xcode-project use-profiles
       - name: Decode private key
         script: |
-          echo "Checking APP_STORE_CONNECT_KEY_CONTENT variable..."
-          if [ -z "$APP_STORE_CONNECT_KEY_CONTENT" ]; then
-            echo "Error: APP_STORE_CONNECT_KEY_CONTENT is not set or empty"
-            echo "Available environment variables:"
-            env | grep -i app_store || true
+          echo "Decoding App Store Connect API key..."
+
+          # Access the variable directly from Codemagic environment (not through YAML vars)
+          # This avoids YAML processing issues with long base64 strings
+          if [ -z "$CM_ENV_APP_STORE_CONNECT_KEY_CONTENT" ]; then
+            echo "Error: APP_STORE_CONNECT_KEY_CONTENT environment variable not found"
+            echo "Please ensure it's set in Codemagic Environment Variables"
             exit 1
           fi
-          echo "Variable is set, length: ${#APP_STORE_CONNECT_KEY_CONTENT}"
-          echo "Decoding private key..."
-          echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 -d > /tmp/api_key.p8
-          if [ $? -eq 0 ]; then
-            echo "Successfully decoded private key"
-            ls -l /tmp/api_key.p8
+
+          # Decode the base64 content directly
+          echo "$CM_ENV_APP_STORE_CONNECT_KEY_CONTENT" | base64 -d > /tmp/api_key.p8
+
+          if [ ! -s /tmp/api_key.p8 ]; then
+            echo "ERROR: Failed to decode the private key"
+            echo "Trying without CM_ENV prefix..."
+            echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 -d > /tmp/api_key.p8
+          fi
+
+          if [ -f /tmp/api_key.p8 ] && [ -s /tmp/api_key.p8 ]; then
+            echo "✓ Successfully created private key file"
+            ls -lh /tmp/api_key.p8
+            head -n 1 /tmp/api_key.p8
           else
-            echo "Failed to decode private key"
+            echo "✗ Failed to create valid private key file"
             exit 1
           fi
       - name: Configure build environment
