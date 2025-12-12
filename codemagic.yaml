@@ -77,8 +77,21 @@ workflows:
           set -e
           echo "Setting up App Store Connect API key..."
 
-          # Decode base64 environment variable to file
-          echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 --decode > /tmp/api_key.p8
+          # Debug: Check if variable exists
+          if [ -z "$APP_STORE_CONNECT_KEY_CONTENT" ]; then
+            echo "✗ APP_STORE_CONNECT_KEY_CONTENT is empty or not set"
+            echo "Checking environment..."
+            env | grep -i "app_store" || echo "No APP_STORE variables found"
+            exit 1
+          fi
+
+          echo "✓ Variable found (length: ${#APP_STORE_CONNECT_KEY_CONTENT})"
+
+          # Decode base64 to file (macOS uses -D flag)
+          echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 -D > /tmp/api_key.p8 2>&1 || {
+            echo "✗ Base64 decode failed, trying with --decode flag"
+            echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 --decode > /tmp/api_key.p8
+          }
 
           if [ ! -f /tmp/api_key.p8 ]; then
             echo "✗ Private key file not found"
@@ -91,7 +104,8 @@ workflows:
           # Verify it's a valid PEM key
           if ! grep -q "BEGIN PRIVATE KEY" /tmp/api_key.p8; then
             echo "✗ File does not contain a valid PEM private key"
-            cat /tmp/api_key.p8
+            echo "First line:"
+            head -n 1 /tmp/api_key.p8
             exit 1
           fi
 
