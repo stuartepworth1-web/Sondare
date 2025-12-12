@@ -72,55 +72,30 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
-      - name: Decode private key
+      - name: Setup private key
         script: |
-          echo "Decoding App Store Connect API key..."
+          set -e
+          echo "Setting up App Store Connect API key..."
 
-          if [ -z "$APP_STORE_CONNECT_KEY_CONTENT" ]; then
-            echo "✗ Error: APP_STORE_CONNECT_KEY_CONTENT is not set"
-            exit 1
-          fi
+          # Decode base64 environment variable to file
+          echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 --decode > /tmp/api_key.p8
 
-          KEY_LENGTH=${#APP_STORE_CONNECT_KEY_CONTENT}
-          echo "Key content length: $KEY_LENGTH characters"
-
-          # Check if it's already a PEM key (starts with -----BEGIN)
-          if echo "$APP_STORE_CONNECT_KEY_CONTENT" | grep -q "BEGIN PRIVATE KEY"; then
-            echo "Content appears to be a plain text PEM key"
-            # Handle escaped newlines by using printf to interpret them
-            printf "%b" "$APP_STORE_CONNECT_KEY_CONTENT" > /tmp/api_key.p8
-          else
-            echo "Content appears to be base64 encoded, attempting to decode..."
-            echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 -d > /tmp/api_key.p8 2>&1
-          fi
-
-          # Verify the key file
-          if [ ! -f /tmp/api_key.p8 ] || [ ! -s /tmp/api_key.p8 ]; then
-            echo "✗ Failed to create private key file"
+          if [ ! -f /tmp/api_key.p8 ]; then
+            echo "✗ Private key file not found"
             exit 1
           fi
 
           FILE_SIZE=$(wc -c < /tmp/api_key.p8)
-          echo "✓ Private key file created: ${FILE_SIZE} bytes"
+          echo "✓ Private key decoded: ${FILE_SIZE} bytes"
 
-          # Validate it's a proper PEM key
+          # Verify it's a valid PEM key
           if ! grep -q "BEGIN PRIVATE KEY" /tmp/api_key.p8; then
             echo "✗ File does not contain a valid PEM private key"
-            echo "File contents:"
             cat /tmp/api_key.p8
             exit 1
           fi
 
-          # Validate minimum size (typical P8 keys are 200+ bytes)
-          if [ "$FILE_SIZE" -lt 100 ]; then
-            echo "✗ Key file is too small (${FILE_SIZE} bytes), likely invalid"
-            exit 1
-          fi
-
           echo "✓ Key validation passed"
-          head -n 1 /tmp/api_key.p8
-          tail -n 1 /tmp/api_key.p8
-
       - name: Configure build environment
         script: |
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
@@ -151,11 +126,6 @@ workflows:
             echo "✗ Private key file not found at /tmp/api_key.p8"
             exit 1
           fi
-
-          echo "Private key file found:"
-          ls -lh /tmp/api_key.p8
-          echo "First line:"
-          head -n 1 /tmp/api_key.p8
 
           echo "Publishing $IPA_PATH to TestFlight..."
 
