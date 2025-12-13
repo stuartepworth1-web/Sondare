@@ -11,7 +11,11 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "distribution": "store",
+      "autoIncrement": true,
+      "ios": {
+        "bundleIdentifier": "com.sondare.app"
+      }
     }
   },
   "submit": {
