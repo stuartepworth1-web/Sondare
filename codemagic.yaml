@@ -77,21 +77,35 @@ workflows:
           set -e
           echo "Setting up App Store Connect API key..."
 
-          # Debug: Check if variable exists
-          if [ -z "$APP_STORE_CONNECT_KEY_CONTENT" ]; then
-            echo "✗ APP_STORE_CONNECT_KEY_CONTENT is empty or not set"
-            echo "Checking environment..."
-            env | grep -i "app_store" || echo "No APP_STORE variables found"
+          # Option 1: If uploaded as file in Codemagic (recommended)
+          if [ -f "$CM_KEYSTORE_PATH/AuthKey_$APP_STORE_CONNECT_KEY_IDENTIFIER.p8" ]; then
+            echo "✓ Using uploaded .p8 file from Codemagic"
+            cp "$CM_KEYSTORE_PATH/AuthKey_$APP_STORE_CONNECT_KEY_IDENTIFIER.p8" /tmp/api_key.p8
+          # Option 2: Use from environment variable
+          elif [ -n "$APP_STORE_CONNECT_KEY_CONTENT" ]; then
+            KEY_VAR="${APP_STORE_CONNECT_KEY_CONTENT}"
+
+            # Check if it's already plain text PEM format
+            if echo "$KEY_VAR" | grep -q "BEGIN PRIVATE KEY"; then
+              echo "Using plain text PEM key from environment variable"
+              echo "$KEY_VAR" > /tmp/api_key.p8
+            else
+              # It's base64-encoded, decode it
+              echo "Using base64-encoded environment variable"
+              echo "Variable length: ${#KEY_VAR} chars"
+
+              if [ ${#KEY_VAR} -lt 100 ]; then
+                echo "✗ Variable too short (${#KEY_VAR} chars, expected ~344)"
+                exit 1
+              fi
+
+              echo "$KEY_VAR" | base64 -D > /tmp/api_key.p8 2>&1 || \
+                echo "$KEY_VAR" | base64 --decode > /tmp/api_key.p8
+            fi
+          else
+            echo "✗ No private key found (neither file nor env variable)"
             exit 1
           fi
-
-          echo "✓ Variable found (length: ${#APP_STORE_CONNECT_KEY_CONTENT})"
-
-          # Decode base64 to file (macOS uses -D flag)
-          echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 -D > /tmp/api_key.p8 2>&1 || {
-            echo "✗ Base64 decode failed, trying with --decode flag"
-            echo "$APP_STORE_CONNECT_KEY_CONTENT" | base64 --decode > /tmp/api_key.p8
-          }
 
           if [ ! -f /tmp/api_key.p8 ]; then
             echo "✗ Private key file not found"
