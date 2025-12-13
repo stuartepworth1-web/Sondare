@@ -4,16 +4,15 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: stuartepworth
+      app_store_connect: Sondare
     environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.sondare.app
       vars:
         EXPO_TOKEN: $EXPO_TOKEN
-        APPLE_ID: $APPLE_ID
-        ASC_APP_ID: $ASC_APP_ID
-        APPLE_TEAM_ID: $APPLE_TEAM_ID
+        APP_STORE_CONNECT_KEY_ID: F646ZQHGFZ
+        APP_STORE_CONNECT_ISSUER_ID: 018630da-6342-4f29-a4f8-edb5d94978a2
       node: 20.11.1
       xcode: 15.4
     triggering:
