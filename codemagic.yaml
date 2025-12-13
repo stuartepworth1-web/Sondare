@@ -13,7 +13,11 @@ workflows:
         APP_STORE_ID: $APP_STORE_ID
         APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
         APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        APP_STORE_CONNECT_KEY_CONTENT: $APP_STORE_CONNECT_KEY_CONTENT
+        P8_KEY_PART1: $P8_KEY_PART1
+        P8_KEY_PART2: $P8_KEY_PART2
+        P8_KEY_PART3: $P8_KEY_PART3
+        P8_KEY_PART4: $P8_KEY_PART4
+        P8_KEY_PART5: $P8_KEY_PART5
       node: 20.19.4
     cache:
       cache_paths:
@@ -77,18 +81,17 @@ workflows:
           set -e
           echo "Setting up App Store Connect API key..."
 
-          # Look for .p8 file in the repo
-          P8_FILE=$(find . -maxdepth 1 -name "AuthKey_*.p8" | head -1)
+          # Reassemble the .p8 key from multiple parts (workaround for env var length limits)
+          FULL_KEY="${P8_KEY_PART1}${P8_KEY_PART2}${P8_KEY_PART3}${P8_KEY_PART4}${P8_KEY_PART5}"
 
-          if [ -n "$P8_FILE" ]; then
-            echo "✓ Found .p8 file in repo: $P8_FILE"
-            cp "$P8_FILE" /tmp/api_key.p8
-          else
-            echo "✗ No .p8 file found in repository root"
-            echo "Files in root:"
-            ls -la *.p8 2>/dev/null || echo "No .p8 files found"
+          if [ -z "$FULL_KEY" ]; then
+            echo "✗ P8_KEY_PART variables not set"
+            echo "Please add the split .p8 key parts to Codemagic environment variables"
             exit 1
           fi
+
+          echo "✓ Reassembled key from parts (length: ${#FULL_KEY} chars)"
+          echo "$FULL_KEY" | base64 -d > /tmp/api_key.p8
 
           if [ ! -f /tmp/api_key.p8 ]; then
             echo "✗ Private key file not created"
@@ -96,13 +99,11 @@ workflows:
           fi
 
           FILE_SIZE=$(wc -c < /tmp/api_key.p8)
-          echo "✓ Private key copied: ${FILE_SIZE} bytes"
+          echo "✓ Private key decoded: ${FILE_SIZE} bytes"
 
           # Verify it's a valid PEM key
           if ! grep -q "BEGIN PRIVATE KEY" /tmp/api_key.p8; then
             echo "✗ File does not contain a valid PEM private key"
-            echo "First line:"
-            head -n 1 /tmp/api_key.p8
             exit 1
           fi
 
@@ -137,6 +138,14 @@ workflows:
             echo "✗ Private key file not found at /tmp/api_key.p8"
             exit 1
           fi
+
+          echo "=== Debug Info ==="
+          echo "Key ID: ${APP_STORE_CONNECT_KEY_IDENTIFIER}"
+          echo "Issuer ID: ${APP_STORE_CONNECT_ISSUER_ID}"
+          echo "Key file size: $(wc -c < /tmp/api_key.p8) bytes"
+          echo "Key file first line: $(head -n 1 /tmp/api_key.p8)"
+          echo "Key file last line: $(tail -n 1 /tmp/api_key.p8)"
+          echo "=================="
 
           echo "Publishing $IPA_PATH to TestFlight..."
 
