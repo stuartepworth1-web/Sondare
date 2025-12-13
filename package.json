@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "prebuild:ios": "expo prebuild --platform ios --clean",
-    "prebuild:android": "expo prebuild --platform android --clean",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -30,9 +28,9 @@
     "expo-system-ui": "~5.0.5",
     "expo-web-browser": "~14.1.5",
     "lucide-react-native": "^0.475.0",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.79.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-native": "0.76.9",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.3.0",
@@ -44,8 +42,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@types/react": "~19.0.10",
-    "metro": "^0.83.0",
+    "@types/react": "~18.3.0",
     "typescript": "~5.8.3"
   }
 }
