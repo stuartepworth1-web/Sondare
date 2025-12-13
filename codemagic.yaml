@@ -1,158 +1,56 @@
 workflows:
-  ios-release:
-    name: iOS Release
-    max_build_duration: 60
+  ios-build:
+    name: iOS Build
+    max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: Sondare
+      app_store_connect: stuartepworth
     environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.sondare.app
-      xcode: latest
-      cocoapods: default
       vars:
-        BUNDLE_ID: com.sondare.app
-      node: 20.19.4
-    cache:
-      cache_paths:
-        - $HOME/Library/Caches/CocoaPods
-        - $HOME/.cocoapods/repos
+        BUNDLE_ID: "com.sondare.app"
+        XCODE_WORKSPACE: "ios/sondare.xcworkspace"
+        XCODE_SCHEME: "sondare"
+      node: 20.11.1
+      xcode: 15.4
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
     scripts:
       - name: Install dependencies
         script: |
           npm install
-      - name: Prebuild iOS project and install pods
+      - name: Install pods
         script: |
-          set -e
-          export EXPO_NO_DOTENV=1
-          export NODE_ENV=production
-
-          # Clean any existing ios folder to ensure fresh prebuild
-          rm -rf ios
-
-          # Update CocoaPods repo before prebuild
-          pod repo update
-
-          echo "Starting Expo prebuild..."
-          # Use --no-install to skip pod install, we'll do it manually after generating dependencies
-          npx expo prebuild --platform ios --clean --no-install
-          echo "✓ Prebuild completed (without pod install)"
-
-          # Generate native code including ReactAppDependencyProvider
-          echo "Generating React Native native dependencies..."
-
-          # Use React Native CLI to generate native code
-          npx react-native codegen --platform ios --outputPath ios/build/generated/ios
-
-          # Run pod install
-          echo "Running pod install..."
-          cd ios
-          pod install --repo-update
-          cd ..
-
-          # Verify prebuild created necessary files
-          echo "Contents of ios directory:"
-          ls -la ios/
-
-          if [ -d "ios/Pods" ]; then
-            echo "✓ CocoaPods installation completed"
-          else
-            echo "✗ Pods directory not created"
-            exit 1
-          fi
-
-          # Check for CocoaPods workspace (should be directly in ios/, not inside xcodeproj)
-          if [ -d "ios/sondare.xcworkspace" ]; then
-            echo "✓ Workspace found: ios/sondare.xcworkspace"
-          else
-            echo "⚠ Workspace not found after prebuild, running pod install manually..."
-            cd ios && pod install --repo-update && cd ..
-            ls -la ios/
-            if [ -d "ios/sondare.xcworkspace" ]; then
-              echo "✓ Workspace created after manual pod install"
-            else
-              echo "✗ Workspace still not created"
-              exit 1
-            fi
-          fi
-      - name: Set build number
+          cd ios && pod install
+      - name: Build iOS app
         script: |
-          set -e
-          echo "Fetching latest build number from TestFlight..."
-
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" || echo "0")
-          NEW_BUILD=$((LATEST_BUILD + 1))
-
-          echo "Latest build: $LATEST_BUILD, New build: $NEW_BUILD"
-          cd ios && agvtool new-version -all $NEW_BUILD
-      - name: Apply provisioning profiles
+          xcodebuild -workspace ios/sondare.xcworkspace \
+            -scheme sondare \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/sondare.xcarchive \
+            archive
+      - name: Export IPA
         script: |
-          xcode-project use-profiles
-      - name: Configure build environment
-        script: |
-          echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-          cat ios/.xcode.env.local
-      - name: Build iOS
-        script: |
-          set -e
-          export EXPO_NO_DOTENV=1
-          export NODE_ENV=production
-          export ENTRY_FILE=index.js
-
-          echo "Contents of ios directory:"
-          ls -la ios/
-
-          # Use the CocoaPods workspace directly
-          WORKSPACE="ios/sondare.xcworkspace"
-          SCHEME="sondare"
-
-          if [ ! -d "$WORKSPACE" ]; then
-            echo "Workspace not found at $WORKSPACE"
-            exit 1
-          fi
-
-          echo "Using workspace: $WORKSPACE"
-          echo "Using scheme: $SCHEME"
-
-          xcode-project build-ipa \
-            --workspace "$WORKSPACE" \
-            --scheme "$SCHEME" \
-            --config Release
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/sondare.xcarchive \
+            -exportOptionsPlist ios/exportOptions.plist \
+            -exportPath $CM_BUILD_DIR/export
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
     publishing:
+      email:
+        recipients:
+          - your-email@example.com
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-
-  android-release:
-    name: Android Release
-    max_build_duration: 60
-    environment:
-      android_signing:
-        - keystore_reference
-      vars:
-        EXPO_TOKEN: $EXPO_TOKEN
-      node: 20.19.4
-    scripts:
-      - name: Install dependencies
-        script: |
-          npm install
-      - name: Prebuild Android project
-        script: |
-          npm run prebuild:android
-      - name: Set build number
-        script: |
-          cd android && ./gradlew bundleRelease \
-            -PversionCode=$(($(google-play get-latest-build-number --package-name "com.sondare.app") + 1))
-      - name: Build Android
-        script: |
-          cd android && ./gradlew bundleRelease
-    artifacts:
-      - android/app/build/outputs/**/*.aab
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
+        beta_groups:
+          - Internal Testers
