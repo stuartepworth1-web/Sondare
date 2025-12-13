@@ -38,11 +38,22 @@ workflows:
           npx expo prebuild --platform ios --clean
           echo "✓ Prebuild completed"
 
-          # Verify pods were installed
+          # Verify prebuild created necessary files
+          echo "Contents of ios directory:"
+          ls -la ios/
+
           if [ -d "ios/Pods" ]; then
-            echo "✓ CocoaPods installation completed successfully"
+            echo "✓ CocoaPods installation completed"
           else
             echo "✗ Pods directory not created"
+            exit 1
+          fi
+
+          WORKSPACE=$(find ios -name "*.xcworkspace" -type d | head -1)
+          if [ -n "$WORKSPACE" ]; then
+            echo "✓ Workspace found: $WORKSPACE"
+          else
+            echo "✗ No xcworkspace found"
             exit 1
           fi
       - name: Set build number
@@ -64,12 +75,29 @@ workflows:
           cat ios/.xcode.env.local
       - name: Build iOS
         script: |
+          set -e
           export EXPO_NO_DOTENV=1
           export NODE_ENV=production
           export ENTRY_FILE=index.js
+
+          echo "Contents of ios directory:"
+          ls -la ios/
+
+          # Find the workspace dynamically
+          WORKSPACE=$(find ios -name "*.xcworkspace" -type d | head -1)
+          if [ -z "$WORKSPACE" ]; then
+            echo "No xcworkspace found in ios directory"
+            exit 1
+          fi
+
+          # Extract scheme name from workspace
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "Using workspace: $WORKSPACE"
+          echo "Using scheme: $SCHEME"
+
           xcode-project build-ipa \
-            --workspace ios/sondare.xcworkspace \
-            --scheme sondare \
+            --workspace "$WORKSPACE" \
+            --scheme "$SCHEME" \
             --config Release
     artifacts:
       - build/ios/ipa/*.ipa
