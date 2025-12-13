@@ -1,6 +1,6 @@
 workflows:
-  ios-build:
-    name: iOS Build
+  ios-release:
+    name: iOS Release
     max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
@@ -10,12 +10,12 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.sondare.app
       vars:
-        BUNDLE_ID: "com.sondare.app"
-        XCODE_WORKSPACE: "ios/sondare.xcworkspace"
-        XCODE_SCHEME: "sondare"
+        EXPO_TOKEN: $EXPO_TOKEN
+        APPLE_ID: $APPLE_ID
+        ASC_APP_ID: $ASC_APP_ID
+        APPLE_TEAM_ID: $APPLE_TEAM_ID
       node: 20.11.1
       xcode: 15.4
-      cocoapods: default
     triggering:
       events:
         - push
@@ -27,24 +27,17 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
-      - name: Install pods
+      - name: Install EAS CLI
         script: |
-          cd ios && pod install
-      - name: Build iOS app
+          npm install -g eas-cli
+      - name: Build iOS app with EAS
         script: |
-          xcodebuild -workspace ios/sondare.xcworkspace \
-            -scheme sondare \
-            -configuration Release \
-            -archivePath $CM_BUILD_DIR/sondare.xcarchive \
-            archive
-      - name: Export IPA
+          eas build --platform ios --profile production --non-interactive --wait
+      - name: Download build artifact
         script: |
-          xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/sondare.xcarchive \
-            -exportOptionsPlist ios/exportOptions.plist \
-            -exportPath $CM_BUILD_DIR/export
+          eas build:download --platform ios --profile production --output=$CM_BUILD_DIR
     artifacts:
-      - build/ios/ipa/*.ipa
+      - '*.ipa'
     publishing:
       email:
         recipients:
