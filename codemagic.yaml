@@ -81,17 +81,36 @@ workflows:
           set -e
           echo "Setting up App Store Connect API key..."
 
-          # Reassemble the .p8 key from multiple parts (workaround for env var length limits)
+          # Debug: Check each part
+          echo "Part 1 length: ${#P8_KEY_PART1}"
+          echo "Part 2 length: ${#P8_KEY_PART2}"
+          echo "Part 3 length: ${#P8_KEY_PART3}"
+          echo "Part 4 length: ${#P8_KEY_PART4}"
+          echo "Part 5 length: ${#P8_KEY_PART5}"
+
+          # Reassemble the .p8 key from multiple parts
           FULL_KEY="${P8_KEY_PART1}${P8_KEY_PART2}${P8_KEY_PART3}${P8_KEY_PART4}${P8_KEY_PART5}"
 
           if [ -z "$FULL_KEY" ]; then
             echo "✗ P8_KEY_PART variables not set"
-            echo "Please add the split .p8 key parts to Codemagic environment variables"
             exit 1
           fi
 
-          echo "✓ Reassembled key from parts (length: ${#FULL_KEY} chars)"
-          echo "$FULL_KEY" | base64 -d > /tmp/api_key.p8
+          echo "✓ Reassembled key from parts (total length: ${#FULL_KEY} chars)"
+
+          # Check if length is reasonable (should be ~400-500 chars for base64 .p8)
+          if [ ${#FULL_KEY} -lt 200 ]; then
+            echo "✗ Key too short (${#FULL_KEY} chars). Expected ~400-500 chars."
+            echo "Please verify all 5 parts are set correctly in Codemagic."
+            exit 1
+          fi
+
+          # Remove any whitespace/newlines that might have been added
+          FULL_KEY=$(echo "$FULL_KEY" | tr -d '[:space:]')
+          echo "After cleanup: ${#FULL_KEY} chars"
+
+          # Decode the key
+          echo "$FULL_KEY" | base64 -d > /tmp/api_key.p8 2>&1
 
           if [ ! -f /tmp/api_key.p8 ]; then
             echo "✗ Private key file not created"
@@ -104,6 +123,8 @@ workflows:
           # Verify it's a valid PEM key
           if ! grep -q "BEGIN PRIVATE KEY" /tmp/api_key.p8; then
             echo "✗ File does not contain a valid PEM private key"
+            echo "First 50 chars of decoded file:"
+            head -c 50 /tmp/api_key.p8
             exit 1
           fi
 
