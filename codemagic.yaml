@@ -22,7 +22,7 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
-      - name: Prebuild iOS project
+      - name: Prebuild iOS project and install pods
         script: |
           set -e
           export EXPO_NO_DOTENV=1
@@ -31,22 +31,15 @@ workflows:
           # Clean any existing ios folder to ensure fresh prebuild
           rm -rf ios
 
+          # Update CocoaPods repo before prebuild
+          pod repo update
+
           echo "Starting Expo prebuild..."
           npx expo prebuild --platform ios --clean
           echo "✓ Prebuild completed"
-      - name: Install CocoaPods dependencies
-        script: |
-          set -e
-          cd ios
 
-          # Clean pod cache to avoid stale dependencies
-          pod cache clean --all 2>/dev/null || true
-          rm -rf Pods Podfile.lock
-
-          echo "Installing pods..."
-          pod install --repo-update
-
-          if [ -d "Pods" ]; then
+          # Verify pods were installed
+          if [ -d "ios/Pods" ]; then
             echo "✓ CocoaPods installation completed successfully"
           else
             echo "✗ Pods directory not created"
