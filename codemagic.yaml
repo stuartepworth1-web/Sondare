@@ -35,8 +35,21 @@ workflows:
           pod repo update
 
           echo "Starting Expo prebuild..."
-          npx expo prebuild --platform ios --clean
-          echo "✓ Prebuild completed"
+          # Use --no-install to skip pod install, we'll do it manually after generating dependencies
+          npx expo prebuild --platform ios --clean --no-install
+          echo "✓ Prebuild completed (without pod install)"
+
+          # Generate native code including ReactAppDependencyProvider
+          echo "Generating React Native native dependencies..."
+
+          # Use React Native CLI to generate native code
+          npx react-native codegen --platform ios --outputPath ios/build/generated/ios
+
+          # Run pod install
+          echo "Running pod install..."
+          cd ios
+          pod install --repo-update
+          cd ..
 
           # Verify prebuild created necessary files
           echo "Contents of ios directory:"
