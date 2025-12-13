@@ -18,7 +18,6 @@ workflows:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
         - $HOME/.cocoapods/repos
-        - ios/Pods
     scripts:
       - name: Install dependencies
         script: |
@@ -29,13 +28,20 @@ workflows:
           export EXPO_NO_DOTENV=1
           export NODE_ENV=production
 
+          # Clean any existing ios folder to ensure fresh prebuild
+          rm -rf ios
+
           echo "Starting Expo prebuild..."
-          npx expo prebuild --platform ios --clean --no-install
+          npx expo prebuild --platform ios --clean
           echo "✓ Prebuild completed"
       - name: Install CocoaPods dependencies
         script: |
           set -e
           cd ios
+
+          # Clean pod cache to avoid stale dependencies
+          pod cache clean --all 2>/dev/null || true
+          rm -rf Pods Podfile.lock
 
           echo "Installing pods..."
           pod install --repo-update
