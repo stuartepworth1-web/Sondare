@@ -10,7 +10,6 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.sondare.app
       vars:
-        EXPO_TOKEN: $EXPO_TOKEN
         APP_STORE_CONNECT_KEY_ID: F646ZQHGFZ
         APP_STORE_CONNECT_ISSUER_ID: 018630da-6342-4f29-a4f8-edb5d94978a2
       node: 20.11.1
@@ -50,7 +49,6 @@ workflows:
           eas build --platform ios --profile production --non-interactive --wait
       - name: Download build artifact
         script: |
-          export EXPO_TOKEN=$EXPO_TOKEN
           eas build:download --platform ios --profile production --output=$CM_BUILD_DIR
     artifacts:
       - '*.ipa'
