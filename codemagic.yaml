@@ -31,9 +31,18 @@ workflows:
           npm install -g eas-cli
       - name: Build iOS app with EAS
         script: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "ERROR: EXPO_TOKEN is not set"
+            exit 1
+          fi
+          export EXPO_TOKEN=$EXPO_TOKEN
+          echo "Authenticating with EAS..."
+          eas whoami
+          echo "Starting build..."
           eas build --platform ios --profile production --non-interactive --wait
       - name: Download build artifact
         script: |
+          export EXPO_TOKEN=$EXPO_TOKEN
           eas build:download --platform ios --profile production --output=$CM_BUILD_DIR
     artifacts:
       - '*.ipa'
