@@ -32,13 +32,21 @@ workflows:
       - name: Build iOS app with EAS
         script: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo "ERROR: EXPO_TOKEN is not set"
+            echo "ERROR: EXPO_TOKEN environment variable is not set in Codemagic"
             exit 1
           fi
-          export EXPO_TOKEN=$EXPO_TOKEN
+          echo "Token is set (length: ${#EXPO_TOKEN} characters)"
+          echo "Token prefix: ${EXPO_TOKEN:0:10}..."
           echo "Authenticating with EAS..."
-          eas whoami
-          echo "Starting build..."
+          if ! eas whoami; then
+            echo "ERROR: Authentication failed. Please check:"
+            echo "1. Token was created at https://expo.dev/settings/access-tokens"
+            echo "2. Token is a Personal Access Token (not robot token)"
+            echo "3. Token was copied correctly with no spaces"
+            echo "4. Token hasn't expired"
+            exit 1
+          fi
+          echo "Authentication successful! Starting build..."
           eas build --platform ios --profile production --non-interactive --wait
       - name: Download build artifact
         script: |
