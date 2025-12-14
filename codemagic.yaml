@@ -12,6 +12,7 @@ workflows:
       vars:
         APP_STORE_CONNECT_KEY_ID: F646ZQHGFZ
         APP_STORE_CONNECT_ISSUER_ID: 018630da-6342-4f29-a4f8-edb5d94978a2
+        EXPO_TOKEN: $EXPO_TOKEN
       node: 20.11.1
       xcode: 16.0
     triggering:
