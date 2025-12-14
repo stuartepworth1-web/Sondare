@@ -42,8 +42,7 @@
         {
           "cameraPermission": "Allow Sondare to access your camera to capture photos and videos."
         }
-      ],
-      "expo-symbols"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
