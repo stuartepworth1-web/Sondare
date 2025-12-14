@@ -12,10 +12,7 @@
     },
     "production": {
       "distribution": "store",
-      "autoIncrement": true,
-      "ios": {
-        "bundleIdentifier": "com.sondare.app"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
