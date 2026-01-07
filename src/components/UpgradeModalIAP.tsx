@@ -22,6 +22,8 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [offerings, setOfferings] = useState<any>(null);
+  const [loadingOfferings, setLoadingOfferings] = useState(false);
+  const [error, setError] = useState<string>('');
   const isNative = isNativePlatform();
 
   const plans: PlanConfig[] = [
@@ -92,11 +94,19 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
   }, [isNative]);
 
   const loadOfferings = async () => {
+    setLoadingOfferings(true);
+    setError('');
     try {
       const currentOffering = await getOfferings();
       setOfferings(currentOffering);
-    } catch (error) {
+      if (!currentOffering?.availablePackages || currentOffering.availablePackages.length === 0) {
+        setError('No subscription plans available. Please check your internet connection and try again.');
+      }
+    } catch (error: any) {
       console.error('Failed to load offerings:', error);
+      setError('Unable to load subscription plans. Please check your internet connection and try again.');
+    } finally {
+      setLoadingOfferings(false);
     }
   };
 
@@ -106,6 +116,7 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
     }
 
     setLoading(true);
+    setError('');
 
     try {
       if (isNative) {
@@ -114,8 +125,15 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
         await handleStripePurchase(plan);
       }
     } catch (error: any) {
-      if (error.code !== 'PURCHASE_CANCELLED_ERROR') {
-        alert('Purchase failed. Please try again.');
+      console.error('Purchase error:', error);
+      if (error.code === 'PURCHASE_CANCELLED_ERROR') {
+        setError('Purchase was cancelled.');
+      } else if (error.code === 'STORE_PROBLEM_ERROR') {
+        setError('Unable to connect to the App Store. Please check your internet connection and try again.');
+      } else if (error.code === 'PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR') {
+        setError('This subscription is currently not available. Please try again later.');
+      } else {
+        setError(error.message || 'Purchase failed. Please check your payment method and try again.');
       }
     } finally {
       setLoading(false);
@@ -123,9 +141,8 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
   };
 
   const handleIAPPurchase = async (plan: PlanConfig) => {
-    if (!offerings?.availablePackages) {
-      alert('Products not available. Please try again later.');
-      return;
+    if (!offerings?.availablePackages || offerings.availablePackages.length === 0) {
+      throw new Error('Subscription plans are not available. Please check your internet connection and try again.');
     }
 
     const packageToPurchase = offerings.availablePackages.find(
@@ -133,27 +150,32 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
     );
 
     if (!packageToPurchase) {
-      alert('Product not found. Please contact support.');
-      return;
+      throw new Error(`The ${plan.name} subscription plan is currently unavailable. Please try again later or contact support.`);
     }
 
     const customerInfo = await purchasePackage(packageToPurchase);
 
     const user = await supabase.auth.getUser();
-    if (user.data.user) {
-      await supabase
-        .from('profiles')
-        .update({
-          subscription_tier: plan.tier,
-          payment_provider: 'apple_iap',
-          subscription_id: customerInfo.originalAppUserId,
-          subscription_status: 'active',
-        })
-        .eq('id', user.data.user.id);
-
-      onUpgradeSuccess?.();
-      onClose();
+    if (!user.data.user) {
+      throw new Error('You must be logged in to purchase a subscription.');
     }
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        subscription_tier: plan.tier,
+        payment_provider: 'apple_iap',
+        subscription_id: customerInfo.originalAppUserId,
+        subscription_status: 'active',
+      })
+      .eq('id', user.data.user.id);
+
+    if (updateError) {
+      throw new Error('Failed to update your subscription. Please contact support.');
+    }
+
+    onUpgradeSuccess?.();
+    onClose();
   };
 
   const handleStripePurchase = async (plan: PlanConfig) => {
@@ -164,18 +186,20 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
     if (!isNative) return;
 
     setRestoring(true);
+    setError('');
     try {
       const customerInfo = await restorePurchases();
 
-      if (customerInfo.entitlements.active) {
-        alert('Purchases restored successfully!');
+      if (customerInfo.entitlements.active && Object.keys(customerInfo.entitlements.active).length > 0) {
+        setError('');
         onUpgradeSuccess?.();
         onClose();
       } else {
-        alert('No active purchases found.');
+        setError('No active purchases found. If you believe this is an error, please contact support.');
       }
-    } catch (error) {
-      alert('Failed to restore purchases. Please try again.');
+    } catch (error: any) {
+      console.error('Restore error:', error);
+      setError('Failed to restore purchases. Please check your internet connection and try again.');
     } finally {
       setRestoring(false);
     }
@@ -196,11 +220,32 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
-          {isNative && (
+          {error && !loading && !restoring && (
+            <div className="glass-card p-4 bg-red-500/10 border border-red-500/30 space-y-3">
+              <p className="text-red-400 text-sm">{error}</p>
+              {error.includes('subscription plans') && (
+                <button
+                  onClick={loadOfferings}
+                  className="glass-button px-4 py-2 text-sm"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+
+          {loadingOfferings && (
+            <div className="glass-card p-8 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+              <p className="text-white/60">Loading subscription plans...</p>
+            </div>
+          )}
+
+          {!loadingOfferings && isNative && (
             <div className="flex justify-end">
               <button
                 onClick={handleRestore}
-                disabled={restoring}
+                disabled={restoring || loading}
                 className="text-sm text-orange-500 hover:text-orange-400 disabled:opacity-50"
               >
                 {restoring ? 'Restoring...' : 'Restore Purchases'}
@@ -208,7 +253,8 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
             </div>
           )}
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          {!loadingOfferings && (
+            <div className="grid sm:grid-cols-2 gap-4">
             {plans.map((plan) => (
               <div
                 key={plan.tier}
@@ -271,13 +317,16 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
               </div>
             ))}
           </div>
+          )}
 
-          <div className="glass-card p-4 text-center text-sm text-white/60">
-            <p>Need more credits? Contact support for custom enterprise plans.</p>
-            {isNative && (
-              <p className="mt-2">Payment will be charged to your Apple ID account.</p>
-            )}
-          </div>
+          {!loadingOfferings && (
+            <div className="glass-card p-4 text-center text-sm text-white/60">
+              <p>Need more credits? Contact support for custom enterprise plans.</p>
+              {isNative && (
+                <p className="mt-2">Payment will be charged to your Apple ID account.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
