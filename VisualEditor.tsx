@@ -1034,17 +1034,55 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             onMouseDown={(e) => handleMouseDown(e, component)}
           >
             {resizeHandles}
-            <img
-              src={component.props.source}
-              alt="Component"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                borderRadius: `${component.props.borderRadius}px`,
-                pointerEvents: 'none',
-              }}
-            />
+            {component.props.source ? (
+              <img
+                src={component.props.source}
+                alt="Component"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: `${component.props.borderRadius}px`,
+                  pointerEvents: 'none',
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.style.backgroundColor = '#1C1C1E';
+                    parent.style.display = 'flex';
+                    parent.style.alignItems = 'center';
+                    parent.style.justifyContent = 'center';
+                    if (!parent.querySelector('.image-error')) {
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'image-error';
+                      errorDiv.textContent = 'Image failed to load';
+                      errorDiv.style.color = '#666';
+                      errorDiv.style.fontSize = '12px';
+                      errorDiv.style.pointerEvents = 'none';
+                      parent.appendChild(errorDiv);
+                    }
+                  }
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#1C1C1E',
+                  borderRadius: `${component.props.borderRadius || 0}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#666',
+                  fontSize: '12px',
+                  pointerEvents: 'none',
+                }}
+              >
+                No image selected
+              </div>
+            )}
           </div>
         );
 
