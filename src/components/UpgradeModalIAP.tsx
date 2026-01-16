@@ -45,7 +45,7 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       name: 'Starter',
       price: '$9.99',
       credits: 50,
-      productId: 'com.sondare.app.starter.monthly',
+      productId: 'starter_monthly',
       features: [
         '50 app generations/month',
         'All templates',
@@ -59,7 +59,7 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       name: 'Pro',
       price: '$19.99',
       credits: 200,
-      productId: 'com.sondare.app.pro.monthly',
+      productId: 'pro_monthly',
       features: [
         '200 app generations/month',
         'All templates',
@@ -74,7 +74,7 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       name: 'Entrepreneur',
       price: '$49.99',
       credits: 500,
-      productId: 'com.sondare.app.entrepreneur.monthly',
+      productId: 'entrepreneur_monthly',
       features: [
         '500 app generations/month',
         'All templates',
@@ -98,13 +98,15 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
     setError('');
     try {
       const currentOffering = await getOfferings();
+      console.log('Loaded offerings:', currentOffering);
       setOfferings(currentOffering);
       if (!currentOffering?.availablePackages || currentOffering.availablePackages.length === 0) {
-        setError('No subscription plans available. Please check your internet connection and try again.');
+        console.error('No packages found in offerings');
+        setError('Subscription plans are not currently available. This may be because the app is in review. Please try again later or contact support.');
       }
     } catch (error: any) {
       console.error('Failed to load offerings:', error);
-      setError('Unable to load subscription plans. Please check your internet connection and try again.');
+      setError(`Unable to load subscription plans: ${error.message || 'Unknown error'}. Please check your internet connection and try again.`);
     } finally {
       setLoadingOfferings(false);
     }
@@ -141,19 +143,31 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
   };
 
   const handleIAPPurchase = async (plan: PlanConfig) => {
+    console.log('Starting IAP purchase for plan:', plan.name);
+
     if (!offerings?.availablePackages || offerings.availablePackages.length === 0) {
-      throw new Error('Subscription plans are not available. Please check your internet connection and try again.');
+      console.error('No offerings available');
+      throw new Error('Subscription plans are not currently available. This may be because the app is in review. Please try the "Restore Purchases" option if you\'ve already subscribed, or contact support.');
     }
 
+    console.log('Available packages:', offerings.availablePackages.map((p: any) => ({
+      identifier: p.identifier,
+      productId: p.product.identifier
+    })));
+
     const packageToPurchase = offerings.availablePackages.find(
-      (pkg: any) => pkg.product.identifier === plan.productId
+      (pkg: any) => pkg.identifier === plan.productId || pkg.product.identifier === plan.productId
     );
 
     if (!packageToPurchase) {
+      console.error(`Package not found for identifier: ${plan.productId}`);
+      console.error('Available packages:', offerings.availablePackages);
       throw new Error(`The ${plan.name} subscription plan is currently unavailable. Please try again later or contact support.`);
     }
 
+    console.log('Purchasing package:', packageToPurchase.identifier, 'with product:', packageToPurchase.product.identifier);
     const customerInfo = await purchasePackage(packageToPurchase);
+    console.log('Purchase successful, updating profile');
 
     const user = await supabase.auth.getUser();
     if (!user.data.user) {
@@ -171,9 +185,11 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       .eq('id', user.data.user.id);
 
     if (updateError) {
+      console.error('Failed to update profile:', updateError);
       throw new Error('Failed to update your subscription. Please contact support.');
     }
 
+    console.log('Profile updated successfully');
     onUpgradeSuccess?.();
     onClose();
   };
