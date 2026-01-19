@@ -12,9 +12,12 @@ import {
   Mail,
   Smartphone,
   Rocket,
+  LogIn,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Auth } from '../components/Auth';
 
 interface SettingsProps {
   onShowUpgrade: () => void;
@@ -25,6 +28,7 @@ export function Settings({ onShowUpgrade }: SettingsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
 
@@ -64,6 +68,33 @@ export function Settings({ onShowUpgrade }: SettingsProps) {
   const openUrl = (url: string) => {
     window.location.href = url;
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen pb-24 p-4 sm:p-6 flex flex-col items-center justify-center space-y-4">
+        <div className="glass-card p-5 sm:p-6 rounded-full">
+          <SettingsIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white/40" />
+        </div>
+        <div className="text-center space-y-2 max-w-md">
+          <h3 className="text-base sm:text-lg font-semibold">Sign In to Manage Settings</h3>
+          <p className="text-white/60 text-xs sm:text-sm">
+            Create a free account to access your profile and preferences.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAuth(true)}
+          className="accent-button px-5 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 text-sm sm:text-base"
+        >
+          <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
+          Sign Up Free
+        </button>
+
+        {showAuth && (
+          <Auth onClose={() => setShowAuth(false)} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-24 p-4 sm:p-6 space-y-4 sm:space-y-6">

@@ -94,11 +94,7 @@ function AppContent() {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  if (!user) {
-    return <Auth />;
-  }
-
-  if (!hasSeenTutorial) {
+  if (!hasSeenTutorial && user) {
     return <InteractiveTutorial onComplete={handleTutorialComplete} />;
   }
 
