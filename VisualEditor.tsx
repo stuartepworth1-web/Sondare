@@ -1293,7 +1293,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
       <div className="flex-1 flex overflow-hidden">
         {showComponentLibrary && (
-          <div className="hidden md:block md:w-64 glass-card border-r border-white/10">
+          <div className="w-64 glass-card border-r border-white/10 flex-shrink-0 overflow-y-auto">
             <ComponentLibrary onSelectComponent={handleAddComponent} />
           </div>
         )}
@@ -1392,7 +1392,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         </div>
 
         {showPropertyEditor && selectedComponent && (
-          <div className="hidden md:block md:w-80 glass-card border-l border-white/10 overflow-y-auto">
+          <div className="w-80 glass-card border-l border-white/10 overflow-y-auto flex-shrink-0">
             <div className="p-4 space-y-4">
               <AlignmentTools
                 onAlign={handleAlign}
@@ -1411,66 +1411,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         )}
       </div>
 
-      {showComponentLibrary && (
-        <div className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end">
-          <div className="w-full glass-card rounded-t-3xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="font-semibold">Components</h3>
-              <button
-                onClick={() => setShowComponentLibrary(false)}
-                className="glass-button p-2"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto">
-              <ComponentLibrary onSelectComponent={(comp) => {
-                handleAddComponent(comp);
-                setShowComponentLibrary(false);
-              }} />
-            </div>
-          </div>
-        </div>
-      )}
 
-      {showPropertyEditor && selectedComponent && (
-        <div className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end">
-          <div className="w-full glass-card rounded-t-3xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="font-semibold">Properties</h3>
-              <button
-                onClick={() => {
-                  setShowPropertyEditor(false);
-                  setSelectedComponent(null);
-                }}
-                className="glass-button p-2"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto">
-              <PropertyEditor
-                component={selectedComponent}
-                onUpdate={handleUpdateComponent}
-                onDelete={(id) => {
-                  handleDeleteComponent(id);
-                  setShowPropertyEditor(false);
-                }}
-                onDuplicate={(id) => {
-                  handleDuplicateComponent(id);
-                  setShowPropertyEditor(false);
-                }}
-                onLayerUp={handleLayerUp}
-                onLayerDown={handleLayerDown}
-                onClose={() => {
-                  setShowPropertyEditor(false);
-                  setSelectedComponent(null);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {showPresetLibrary && (
         <PresetLibrary
