@@ -15,7 +15,7 @@ async function generateWithClaude(prompt: string) {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
+    throw new Error('AI service is temporarily unavailable. Our team has been notified and is working on a fix. Please try again later.');
   }
 
   const systemPrompt = `You are an expert mobile app designer and React developer. Generate a complete mobile app structure based on the user's prompt.
@@ -53,7 +53,7 @@ Guidelines:
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-sonnet-20240620',
       max_tokens: 4096,
       messages: [
         {
@@ -67,7 +67,17 @@ Guidelines:
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Claude API error: ${error}`);
+    console.error('Claude API error:', error);
+
+    if (response.status === 401) {
+      throw new Error('AI service authentication failed. Our team has been notified. Please try again later.');
+    } else if (response.status === 429) {
+      throw new Error('Our AI service is experiencing high demand. Please try again in a few moments.');
+    } else if (response.status >= 500) {
+      throw new Error('AI service is temporarily unavailable. Please try again in a few moments.');
+    } else {
+      throw new Error('Unable to generate your app. Please try again or contact support if the issue persists.');
+    }
   }
 
   const data = await response.json();
@@ -75,17 +85,18 @@ Guidelines:
 
   let jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error('Failed to parse Claude response - no JSON found');
+    console.error('No JSON found in Claude response:', content.substring(0, 500));
+    throw new Error('Unable to generate app structure. Please try again or rephrase your request.');
   }
 
   let jsonStr = jsonMatch[0];
-  
+
   try {
     return JSON.parse(jsonStr);
   } catch (parseError) {
     console.error('JSON parse error:', parseError);
     console.error('Attempted to parse:', jsonStr.substring(0, 500));
-    throw new Error('Failed to parse Claude response as valid JSON');
+    throw new Error('Unable to process the generated app. Please try again.');
   }
 }
 
@@ -171,7 +182,7 @@ Deno.serve(async (req: Request) => {
           components: appStructure.components,
           features: appStructure.features,
         },
-        ai_model: 'claude-3-5-sonnet-20241022',
+        ai_model: 'claude-3-5-sonnet-20240620',
         processing_time: processingTime,
         status: 'completed',
       });
