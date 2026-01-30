@@ -101,12 +101,11 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       console.log('Loaded offerings:', currentOffering);
       setOfferings(currentOffering);
       if (!currentOffering?.availablePackages || currentOffering.availablePackages.length === 0) {
-        console.error('No packages found in offerings');
-        setError('Subscription plans are not currently available. This may be because the app is in review. Please try again later or contact support.');
+        console.log('No packages available - showing plans in view-only mode');
       }
     } catch (error: any) {
       console.error('Failed to load offerings:', error);
-      setError(`Unable to load subscription plans: ${error.message || 'Unknown error'}. Please check your internet connection and try again.`);
+      setError('We are experiencing technical difficulties loading subscription options. Please try again in a few moments.');
     } finally {
       setLoadingOfferings(false);
     }
@@ -146,8 +145,11 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
     console.log('Starting IAP purchase for plan:', plan.name);
 
     if (!offerings?.availablePackages || offerings.availablePackages.length === 0) {
-      console.error('No offerings available');
-      throw new Error('Subscription plans are not currently available. This may be because the app is in review. Please try the "Restore Purchases" option if you\'ve already subscribed, or contact support.');
+      console.error('No offerings available, attempting to reload');
+      await loadOfferings();
+      if (!offerings?.availablePackages || offerings.availablePackages.length === 0) {
+        throw new Error('Subscription services are temporarily unavailable. Please try again in a few moments or use the "Restore Purchases" option if you have an active subscription.');
+      }
     }
 
     console.log('Available packages:', offerings.availablePackages.map((p: any) => ({
@@ -239,21 +241,27 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
           {error && !loading && !restoring && (
             <div className="glass-card p-4 bg-red-500/10 border border-red-500/30 space-y-3">
               <p className="text-red-400 text-sm">{error}</p>
-              {error.includes('subscription plans') && (
-                <button
-                  onClick={loadOfferings}
-                  className="glass-button px-4 py-2 text-sm"
-                >
-                  Retry
-                </button>
-              )}
+              <button
+                onClick={loadOfferings}
+                className="glass-button px-4 py-2 text-sm"
+              >
+                Try Again
+              </button>
             </div>
           )}
 
           {loadingOfferings && (
             <div className="glass-card p-8 flex flex-col items-center justify-center gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-              <p className="text-white/60">Loading subscription plans...</p>
+              <p className="text-white/60">Loading subscription options...</p>
+            </div>
+          )}
+
+          {!loadingOfferings && isNative && (!offerings?.availablePackages || offerings.availablePackages.length === 0) && !error && (
+            <div className="glass-card p-4 bg-orange-500/10 border border-orange-500/30">
+              <p className="text-orange-400 text-sm">
+                Subscription options are loading. You can view available plans below.
+              </p>
             </div>
           )}
 
@@ -313,7 +321,8 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
                   disabled={
                     loading ||
                     currentTier === plan.tier ||
-                    plan.tier === 'free'
+                    plan.tier === 'free' ||
+                    (isNative && (!offerings?.availablePackages || offerings.availablePackages.length === 0))
                   }
                   className="w-full accent-button disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
@@ -326,6 +335,8 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
                     'Current Plan'
                   ) : plan.tier === 'free' ? (
                     'Free'
+                  ) : isNative && (!offerings?.availablePackages || offerings.availablePackages.length === 0) ? (
+                    'Loading...'
                   ) : (
                     'Upgrade Now'
                   )}
