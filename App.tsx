@@ -16,8 +16,9 @@ import { PrivacyPolicy } from './screens/PrivacyPolicy';
 import { TermsOfService } from './screens/TermsOfService';
 import { Support } from './screens/Support';
 import { PublishingGuide } from './screens/PublishingGuide';
-import { supabase } from './lib/supabase';
+import { supabase, isMissingEnvVars } from './lib/supabase';
 import { downloadProjectFiles } from './lib/exportApp';
+import { AlertTriangle } from 'lucide-react';
 
 interface Template {
   id: string;
@@ -52,6 +53,29 @@ function AppContent() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  if (isMissingEnvVars) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-zinc-900 rounded-lg p-8 text-center space-y-4">
+          <AlertTriangle className="w-16 h-16 text-orange-500 mx-auto" />
+          <h1 className="text-2xl font-bold text-white">Configuration Required</h1>
+          <p className="text-zinc-400">
+            This app requires environment variables to be configured. Please add the following
+            to your Netlify environment settings:
+          </p>
+          <div className="bg-black rounded p-4 text-left font-mono text-sm text-zinc-300 space-y-2">
+            <div>VITE_SUPABASE_URL</div>
+            <div>VITE_SUPABASE_ANON_KEY</div>
+            <div>VITE_REVENUECAT_IOS_KEY</div>
+          </div>
+          <p className="text-zinc-500 text-sm">
+            After adding these variables, redeploy your site for the changes to take effect.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
