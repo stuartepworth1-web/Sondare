@@ -19,7 +19,7 @@ interface PlanConfig {
 }
 
 export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: UpgradeModalProps) {
-  const [loading, setLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [offerings, setOfferings] = useState<any>(null);
   const [loadingOfferings, setLoadingOfferings] = useState(false);
@@ -88,8 +88,12 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
   ];
 
   useEffect(() => {
+    console.log('UpgradeModalIAP - Platform check:', { isNative });
     if (isNative) {
+      console.log('Native platform detected, loading offerings');
       loadOfferings();
+    } else {
+      console.log('Web platform detected');
     }
   }, [isNative]);
 
@@ -101,12 +105,13 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       console.log('Loaded offerings:', currentOffering);
       setOfferings(currentOffering);
       if (!currentOffering?.availablePackages || currentOffering.availablePackages.length === 0) {
-        console.error('No packages found in offerings');
-        setError('Unable to load subscription plans. Please check your internet connection and try again. If the issue persists, please contact support.');
+        console.log('No packages available - showing plans in view-only mode');
       }
+      return currentOffering;
     } catch (error: any) {
       console.error('Failed to load offerings:', error);
-      setError(`Unable to load subscription plans. Please check your internet connection and try again. If the issue persists, please contact support.`);
+      setError('We are experiencing technical difficulties loading subscription options. Please try again in a few moments.');
+      return null;
     } finally {
       setLoadingOfferings(false);
     }
@@ -117,55 +122,62 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
       return;
     }
 
-    setLoading(true);
+    console.log('handleUpgrade called for plan:', plan.name, 'isNative:', isNative);
+
+    setLoadingPlan(plan.tier);
     setError('');
 
     try {
       if (isNative) {
+        console.log('Calling handleIAPPurchase');
         await handleIAPPurchase(plan);
       } else {
+        console.log('Calling handleStripePurchase');
         await handleStripePurchase(plan);
       }
     } catch (error: any) {
       console.error('Purchase error:', error);
       if (error.code === 'PURCHASE_CANCELLED_ERROR') {
-        setError('Purchase was cancelled.');
+        setError('Purchase was cancelled. You can try again whenever you\'re ready.');
       } else if (error.code === 'STORE_PROBLEM_ERROR') {
         setError('Unable to connect to the App Store. Please check your internet connection and try again.');
       } else if (error.code === 'PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR') {
-        setError('This subscription is currently not available. Please try again later.');
+        setError('This subscription is currently not available. Please try again later or contact support if the issue persists.');
       } else {
-        setError(error.message || 'Purchase failed. Please check your payment method and try again.');
+        setError(error.message || 'Purchase failed. Please try again. If the problem persists, contact support.');
       }
     } finally {
-      setLoading(false);
+      setLoadingPlan(null);
     }
   };
 
   const handleIAPPurchase = async (plan: PlanConfig) => {
     console.log('Starting IAP purchase for plan:', plan.name);
 
-    if (!offerings?.availablePackages || offerings.availablePackages.length === 0) {
-      console.error('No offerings available');
-      await loadOfferings();
-      if (!offerings?.availablePackages || offerings.availablePackages.length === 0) {
-        throw new Error('Unable to load subscription plans. Please check your internet connection and try again. If you\'ve already subscribed, try the "Restore Purchases" option.');
+    let currentOfferings = offerings;
+
+    if (!currentOfferings?.availablePackages || currentOfferings.availablePackages.length === 0) {
+      console.error('No offerings available, attempting to reload');
+      currentOfferings = await loadOfferings();
+
+      if (!currentOfferings?.availablePackages || currentOfferings.availablePackages.length === 0) {
+        throw new Error('Subscription services are temporarily unavailable. Please close this window, check your internet connection, and try again. If you have an active subscription, use the "Restore Purchases" option.');
       }
     }
 
-    console.log('Available packages:', offerings.availablePackages.map((p: any) => ({
+    console.log('Available packages:', currentOfferings.availablePackages.map((p: any) => ({
       identifier: p.identifier,
       productId: p.product.identifier
     })));
 
-    const packageToPurchase = offerings.availablePackages.find(
+    const packageToPurchase = currentOfferings.availablePackages.find(
       (pkg: any) => pkg.identifier === plan.productId || pkg.product.identifier === plan.productId
     );
 
     if (!packageToPurchase) {
       console.error(`Package not found for identifier: ${plan.productId}`);
-      console.error('Available packages:', offerings.availablePackages);
-      throw new Error(`The ${plan.name} subscription plan is currently unavailable. Please try again later or contact support.`);
+      console.error('Available packages:', currentOfferings.availablePackages);
+      throw new Error(`The ${plan.name} subscription plan is currently unavailable. Please close this window and try again later. If the problem persists, please contact support.`);
     }
 
     console.log('Purchasing package:', packageToPurchase.identifier, 'with product:', packageToPurchase.product.identifier);
@@ -189,16 +201,17 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
 
     if (updateError) {
       console.error('Failed to update profile:', updateError);
-      throw new Error('Failed to update your subscription. Please contact support.');
+      throw new Error('Purchase completed, but failed to update your account. Please contact support with your purchase receipt.');
     }
 
     console.log('Profile updated successfully');
+    alert(`Success! Your ${plan.name} subscription is now active. Thank you for upgrading!`);
     onUpgradeSuccess?.();
     onClose();
   };
 
   const handleStripePurchase = async (plan: PlanConfig) => {
-    alert('Stripe integration: Redirect to Stripe checkout for ' + plan.name);
+    throw new Error('Web subscriptions are not yet supported. Please use the mobile app to subscribe.');
   };
 
   const handleRestore = async () => {
@@ -239,24 +252,32 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
-          {error && !loading && !restoring && (
+          {error && !loadingPlan && !restoring && (
             <div className="glass-card p-4 bg-red-500/10 border border-red-500/30 space-y-3">
               <p className="text-red-400 text-sm">{error}</p>
-              {(error.includes('subscription plans') || error.includes('Unable to load')) && (
+              {error.includes('temporarily unavailable') || error.includes('unable to connect') ? (
                 <button
                   onClick={loadOfferings}
                   className="glass-button px-4 py-2 text-sm"
                 >
-                  Retry Loading Plans
+                  Reload Subscriptions
                 </button>
-              )}
+              ) : null}
             </div>
           )}
 
           {loadingOfferings && (
             <div className="glass-card p-8 flex flex-col items-center justify-center gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-              <p className="text-white/60">Loading subscription plans...</p>
+              <p className="text-white/60">Loading subscription options...</p>
+            </div>
+          )}
+
+          {!loadingOfferings && isNative && (!offerings?.availablePackages || offerings.availablePackages.length === 0) && !error && (
+            <div className="glass-card p-4 bg-orange-500/10 border border-orange-500/30">
+              <p className="text-orange-400 text-sm">
+                Subscription options are loading. You can view available plans below.
+              </p>
             </div>
           )}
 
@@ -264,7 +285,7 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
             <div className="flex justify-end">
               <button
                 onClick={handleRestore}
-                disabled={restoring || loading}
+                disabled={restoring || loadingPlan !== null}
                 className="text-sm text-orange-500 hover:text-orange-400 disabled:opacity-50"
               >
                 {restoring ? 'Restoring...' : 'Restore Purchases'}
@@ -314,13 +335,14 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
                 <button
                   onClick={() => handleUpgrade(plan)}
                   disabled={
-                    loading ||
+                    loadingPlan !== null ||
                     currentTier === plan.tier ||
-                    plan.tier === 'free'
+                    plan.tier === 'free' ||
+                    (isNative && (!offerings?.availablePackages || offerings.availablePackages.length === 0))
                   }
                   className="w-full accent-button disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loading ? (
+                  {loadingPlan === plan.tier ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Processing...</span>
@@ -329,6 +351,8 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
                     'Current Plan'
                   ) : plan.tier === 'free' ? (
                     'Free'
+                  ) : isNative && (!offerings?.availablePackages || offerings.availablePackages.length === 0) ? (
+                    'Loading...'
                   ) : (
                     'Upgrade Now'
                   )}
@@ -339,11 +363,39 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
           )}
 
           {!loadingOfferings && (
-            <div className="glass-card p-4 text-center text-sm text-white/60">
-              <p>Need more credits? Contact support for custom enterprise plans.</p>
-              {isNative && (
-                <p className="mt-2">Payment will be charged to your Apple ID account.</p>
-              )}
+            <div className="glass-card p-4 space-y-3">
+              <div className="text-center text-sm text-white/60">
+                <p>Need more credits? Contact support for custom enterprise plans.</p>
+                {isNative && (
+                  <>
+                    <p className="mt-3 font-medium text-white/80">Subscription Information:</p>
+                    <p className="mt-1">Payment will be charged to your Apple ID account at confirmation of purchase.</p>
+                    <p className="mt-1">Subscriptions automatically renew monthly unless auto-renew is turned off at least 24 hours before the end of the current period.</p>
+                    <p className="mt-1">Your account will be charged for renewal within 24 hours prior to the end of the current period.</p>
+                    <p className="mt-1">You can manage and cancel subscriptions in your Apple ID Account Settings.</p>
+                  </>
+                )}
+              </div>
+              <div className="pt-3 border-t border-white/10 flex flex-wrap justify-center gap-3 text-xs">
+                <button
+                  onClick={() => window.location.href = '/privacy-policy'}
+                  className="text-orange-500 hover:text-orange-400 underline"
+                >
+                  Privacy Policy
+                </button>
+                <button
+                  onClick={() => window.location.href = '/terms-of-service'}
+                  className="text-orange-500 hover:text-orange-400 underline"
+                >
+                  Terms of Service
+                </button>
+                <button
+                  onClick={() => window.location.href = '/support'}
+                  className="text-orange-500 hover:text-orange-400 underline"
+                >
+                  Support
+                </button>
+              </div>
             </div>
           )}
         </div>

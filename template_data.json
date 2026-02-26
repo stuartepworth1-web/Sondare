@@ -1,0 +1,259 @@
+{
+  "fitness": {
+    "screens": [
+      {
+        "name": "Dashboard",
+        "type": "home",
+        "backgroundColor": "#0A0E27",
+        "components": [
+          {
+            "type": "container",
+            "props": {
+              "backgroundColor": "transparent",
+              "backgroundImage": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              "borderRadius": 0,
+              "borderWidth": 0,
+              "padding": 0
+            },
+            "position_x": 0,
+            "position_y": 0,
+            "width": 375,
+            "height": 200
+          },
+          {
+            "type": "text",
+            "props": {
+              "text": "Good Morning!",
+              "fontSize": 16,
+              "color": "#FFFFFF99",
+              "fontWeight": "500"
+            },
+            "position_x": 24,
+            "position_y": 60,
+            "width": 327,
+            "height": 24
+          },
+          {
+            "type": "text",
+            "props": {
+              "text": "Ready to Crush Today?",
+              "fontSize": 28,
+              "color": "#FFFFFF",
+              "fontWeight": "bold"
+            },
+            "position_x": 24,
+            "position_y": 88,
+            "width": 327,
+            "height": 40
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "8,547",
+              "subtitle": "Steps Today",
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 20,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 160,
+            "width": 160,
+            "height": 100
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "2.4 mi",
+              "subtitle": "Distance",
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 20,
+              "padding": 20
+            },
+            "position_x": 198,
+            "position_y": 160,
+            "width": 153,
+            "height": 100
+          },
+          {
+            "type": "text",
+            "props": {
+              "text": "Today Workout",
+              "fontSize": 22,
+              "color": "#FFFFFF",
+              "fontWeight": "bold"
+            },
+            "position_x": 24,
+            "position_y": 288,
+            "width": 327,
+            "height": 32
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "Upper Body Strength",
+              "subtitle": "45 min • Intermediate",
+              "backgroundColor": "#667eea",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 332,
+            "width": 327,
+            "height": 90
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "Core & Abs",
+              "subtitle": "30 min • All Levels",
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 438,
+            "width": 327,
+            "height": 90
+          }
+        ]
+      },
+      {
+        "name": "Workouts",
+        "type": "list",
+        "backgroundColor": "#0A0E27",
+        "components": [
+          {
+            "type": "header",
+            "props": {
+              "title": "All Workouts",
+              "backgroundColor": "#0A0E27",
+              "textColor": "#FFFFFF",
+              "fontSize": 28,
+              "fontWeight": "bold"
+            },
+            "position_x": 0,
+            "position_y": 0,
+            "width": 375,
+            "height": 80
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "Full Body HIIT",
+              "subtitle": "40 min • Advanced • 380 cal",
+              "backgroundColor": "#764ba2",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 96,
+            "width": 327,
+            "height": 100
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "Yoga Flow",
+              "subtitle": "60 min • Beginner • 200 cal",
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 212,
+            "width": 327,
+            "height": 100
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "Cardio Blast",
+              "subtitle": "35 min • Intermediate • 420 cal",
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 328,
+            "width": 327,
+            "height": 100
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "Strength Training",
+              "subtitle": "50 min • Advanced • 310 cal",
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 444,
+            "width": 327,
+            "height": 100
+          }
+        ]
+      },
+      {
+        "name": "Profile",
+        "type": "profile",
+        "backgroundColor": "#0A0E27",
+        "components": [
+          {
+            "type": "header",
+            "props": {
+              "title": "Profile",
+              "backgroundColor": "#0A0E27",
+              "textColor": "#FFFFFF",
+              "fontSize": 28,
+              "fontWeight": "bold"
+            },
+            "position_x": 0,
+            "position_y": 0,
+            "width": 375,
+            "height": 80
+          },
+          {
+            "type": "container",
+            "props": {
+              "backgroundColor": "#1a1f3a",
+              "borderRadius": 20,
+              "padding": 24
+            },
+            "position_x": 24,
+            "position_y": 96,
+            "width": 327,
+            "height": 160
+          },
+          {
+            "type": "text",
+            "props": {
+              "text": "Weekly Goal",
+              "fontSize": 18,
+              "color": "#FFFFFF",
+              "fontWeight": "600"
+            },
+            "position_x": 24,
+            "position_y": 280,
+            "width": 327,
+            "height": 32
+          },
+          {
+            "type": "card",
+            "props": {
+              "title": "5 workouts completed",
+              "subtitle": "2 more to reach your goal!",
+              "backgroundColor": "#667eea",
+              "borderRadius": 16,
+              "padding": 20
+            },
+            "position_x": 24,
+            "position_y": 320,
+            "width": 327,
+            "height": 90
+          }
+        ]
+      }
+    ]
+  }
+}

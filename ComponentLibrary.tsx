@@ -28,6 +28,7 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
       textTransform: 'none',
       opacity: 1,
       backgroundColor: 'transparent',
+      backgroundImage: null,
       gradientColors: null,
       gradientDirection: 'vertical',
       paddingHorizontal: 0,
@@ -52,6 +53,7 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
     defaultProps: {
       text: 'Button',
       backgroundColor: '#FF9500',
+      backgroundImage: null,
       textColor: '#FFFFFF',
       fontSize: 16,
       fontFamily: 'System',
@@ -87,6 +89,7 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
     defaultProps: {
       placeholder: 'Enter text...',
       backgroundColor: '#1C1C1E',
+      backgroundImage: null,
       textColor: '#FFFFFF',
       borderColor: '#3A3A3C',
       borderWidth: 1,
@@ -137,6 +140,7 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
     icon: Layout,
     defaultProps: {
       backgroundColor: '#1C1C1E',
+      backgroundImage: null,
       gradientColors: null,
       gradientDirection: 'vertical',
       borderRadius: 12,
@@ -187,6 +191,7 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
       title: 'Card Title',
       subtitle: 'Card subtitle text',
       backgroundColor: '#1C1C1E',
+      backgroundImage: null,
       gradientColors: null,
       gradientDirection: 'vertical',
       borderRadius: 12,
@@ -213,6 +218,7 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
     defaultProps: {
       title: 'Screen Title',
       backgroundColor: '#000000',
+      backgroundImage: null,
       textColor: '#FFFFFF',
       fontSize: 20,
       fontWeight: 'bold',

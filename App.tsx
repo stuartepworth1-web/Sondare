@@ -40,6 +40,10 @@ function AppContent() {
   const [visualEditorProject, setVisualEditorProject] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('App state:', { user: !!user, loading, profile: !!profile, isMissingEnvVars });
+  }, [user, loading, profile]);
+
+  useEffect(() => {
     const onboarded = localStorage.getItem('hasSeenOnboarding');
     const tutorialed = localStorage.getItem('hasSeenTutorial');
 
@@ -105,10 +109,11 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="space-y-4 text-center">
           <div className="text-4xl font-bold gradient-text">Sondare</div>
           <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full mx-auto animate-pulse" />
+          <p className="text-zinc-500 text-sm mt-4">Loading app...</p>
         </div>
       </div>
     );
@@ -118,7 +123,11 @@ function AppContent() {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  if (!hasSeenTutorial && user) {
+  if (!user) {
+    return <Auth />;
+  }
+
+  if (!hasSeenTutorial) {
     return <InteractiveTutorial onComplete={handleTutorialComplete} />;
   }
 

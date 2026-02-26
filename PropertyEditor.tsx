@@ -82,6 +82,18 @@ export function PropertyEditor({ component, onUpdate, onDelete, onDuplicate, onC
       );
     }
 
+    if (key === 'backgroundImage') {
+      return (
+        <div>
+          <label className="text-xs text-white/60 mb-1 block">Background Image</label>
+          <ImageUpload
+            currentUrl={value}
+            onImageUploaded={(url) => handlePropChange('backgroundImage', url)}
+          />
+        </div>
+      );
+    }
+
     if (key === 'fontFamily') {
       return (
         <div>

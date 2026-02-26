@@ -91,7 +91,7 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
 
   if (!user) {
     return (
-      <div className="min-h-screen pb-24 p-4 sm:p-6 flex flex-col items-center justify-center space-y-4">
+      <div className="min-h-screen pb-32 p-4 sm:p-6 flex flex-col items-center justify-center space-y-4">
         <div className="glass-card p-5 sm:p-6 rounded-full">
           <FolderOpen className="w-10 h-10 sm:w-12 sm:h-12 text-white/40" />
         </div>
@@ -118,14 +118,14 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
 
   if (loading) {
     return (
-      <div className="min-h-screen pb-24 flex items-center justify-center">
+      <div className="min-h-screen pb-32 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="min-h-screen pb-32 p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold">My Projects</h1>

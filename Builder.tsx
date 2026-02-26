@@ -257,7 +257,7 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col pb-24">
+    <div className="h-screen flex flex-col pb-32">
       <div className="glass-card m-3 sm:m-4 mb-0 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />

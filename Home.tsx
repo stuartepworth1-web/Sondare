@@ -28,7 +28,7 @@ export function Home({ onShowHowTo, onNavigate, onShowUpgrade }: HomeProps) {
   }
 
   return (
-    <div className="min-h-screen pb-24 p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="min-h-screen pb-32 p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold">

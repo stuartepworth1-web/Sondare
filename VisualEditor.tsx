@@ -668,6 +668,21 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
     });
   };
 
+  const getBackgroundStyle = (props: any) => {
+    const style: any = {};
+
+    if (props.backgroundImage) {
+      style.backgroundImage = `url(${props.backgroundImage})`;
+      style.backgroundSize = 'cover';
+      style.backgroundPosition = 'center';
+      style.backgroundRepeat = 'no-repeat';
+    } else if (props.backgroundColor) {
+      style.backgroundColor = props.backgroundColor;
+    }
+
+    return style;
+  };
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (dragging) {
@@ -945,7 +960,12 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         return (
           <div
             key={component.id}
-            style={baseStyle}
+            style={{
+              ...baseStyle,
+              ...getBackgroundStyle(component.props),
+              padding: `${component.props.paddingVertical || 0}px ${component.props.paddingHorizontal || 0}px`,
+              borderRadius: component.props.borderRadius ? `${component.props.borderRadius}px` : undefined,
+            }}
             onMouseDown={(e) => handleMouseDown(e, component)}
             onDoubleClick={() => handleDoubleClick(component)}
             title="Double-click to edit text"
@@ -980,7 +1000,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: component.props.backgroundColor || '#FF9500',
+                ...getBackgroundStyle(component.props),
                 color: component.props.textColor || '#FFFFFF',
                 fontSize: `${component.props.fontSize || 16}px`,
                 borderRadius: `${component.props.borderRadius || 8}px`,
@@ -1012,7 +1032,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: component.props.backgroundColor,
+                ...getBackgroundStyle(component.props),
                 color: component.props.textColor,
                 border: `1px solid ${component.props.borderColor}`,
                 borderRadius: `${component.props.borderRadius}px`,
@@ -1092,7 +1112,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={{
               ...baseStyle,
-              backgroundColor: component.props.backgroundColor,
+              ...getBackgroundStyle(component.props),
               borderRadius: `${component.props.borderRadius}px`,
               border: `${component.props.borderWidth}px solid ${component.props.borderColor}`,
               padding: `${component.props.padding}px`,
@@ -1142,7 +1162,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={{
               ...baseStyle,
-              backgroundColor: component.props.backgroundColor,
+              ...getBackgroundStyle(component.props),
               borderRadius: `${component.props.borderRadius}px`,
               padding: `${component.props.padding}px`,
             }}
@@ -1164,7 +1184,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={{
               ...baseStyle,
-              backgroundColor: component.props.backgroundColor,
+              ...getBackgroundStyle(component.props),
               display: 'flex',
               alignItems: 'center',
               padding: '0 16px',
@@ -1298,8 +1318,8 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           </div>
         )}
 
-        <div className="flex-1 flex flex-col items-center overflow-auto bg-[#0A0A0A] p-4 md:p-8">
-          <div className="mb-4 flex gap-2 items-center flex-wrap justify-center">
+        <div className="flex-1 flex flex-col items-center overflow-auto bg-[#0A0A0A] p-4 pb-32">
+          <div className="mb-4 flex gap-2 items-center flex-wrap justify-center max-w-4xl">
             <button
               onClick={() => setShowComponentLibrary(!showComponentLibrary)}
               className="glass-button p-2"
@@ -1347,7 +1367,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
           {currentScreen && (
             <div
-              className="relative border-4 md:border-8 border-gray-800 rounded-[40px] shadow-2xl"
+              className="relative border-4 md:border-8 border-gray-800 rounded-[40px] shadow-2xl mb-8"
               style={{
                 width: '100%',
                 maxWidth: '375px',
