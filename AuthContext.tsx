@@ -26,14 +26,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log('AuthProvider initializing');
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AuthProvider timeout effect mounted');
     const timeout = setTimeout(() => {
-      console.warn('Auth loading timeout - forcing completion');
+      console.warn('Auth loading timeout (5s) - forcing completion');
       setLoading(false);
     }, 5000);
 
@@ -59,16 +61,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
-        initializePurchases(session.user.id);
-      } else {
+    console.log('AuthProvider auth check effect mounted');
+
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        console.log('getSession result:', { hasSession: !!session, error });
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          console.log('User found, fetching profile');
+          fetchProfile(session.user.id).finally(() => {
+            console.log('Profile fetch complete, setting loading to false');
+            setLoading(false);
+          });
+          initializePurchases(session.user.id);
+        } else {
+          console.log('No session, setting loading to false');
+          setLoading(false);
+        }
+      })
+      .catch((error) => {
+        console.error('Error getting session:', error);
         setLoading(false);
-      }
-    });
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {

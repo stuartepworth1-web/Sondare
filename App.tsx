@@ -20,6 +20,8 @@ import { supabase, isMissingEnvVars } from './lib/supabase';
 import { downloadProjectFiles } from './lib/exportApp';
 import { AlertTriangle } from 'lucide-react';
 
+console.log('App.tsx loaded');
+
 interface Template {
   id: string;
   name: string;
@@ -303,11 +305,54 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  console.log('App component rendering');
+
+  if (isMissingEnvVars) {
+    console.error('Missing environment variables!');
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="glass-card p-8 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Configuration Required</h1>
+          <p className="text-white mb-4">
+            The app is missing required environment variables.
+          </p>
+          <div className="text-left bg-black/50 p-4 rounded-lg mb-4">
+            <p className="text-sm text-zinc-400 mb-2">Required variables:</p>
+            <ul className="text-xs text-zinc-500 space-y-1 font-mono">
+              <li>VITE_SUPABASE_URL={import.meta.env.VITE_SUPABASE_URL ? '✓' : '✗ MISSING'}</li>
+              <li>VITE_SUPABASE_ANON_KEY={import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓' : '✗ MISSING'}</li>
+            </ul>
+          </div>
+          <p className="text-sm text-zinc-500">
+            Please configure these in your hosting platform's environment variables.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    return (
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    );
+  } catch (error) {
+    console.error('Error rendering App:', error);
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="glass-card p-8 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">App Error</h1>
+          <p className="text-white mb-4">
+            {error instanceof Error ? error.message : 'An unknown error occurred'}
+          </p>
+          <p className="text-sm text-zinc-500">
+            Check the browser console for more details.
+          </p>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;
