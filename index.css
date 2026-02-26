@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-b from-black to-gray-900 text-white font-sans;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :root {
+    --gradient-start: #000000;
+    --gradient-end: #1C1C1E;
+    --surface: #2C2C2E;
+    --accent-orange: #FF9500;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(235, 235, 245, 0.6);
+    --success: #32D74B;
+    --error: #FF453A;
+    --warning: #FFD60A;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+
+  .glass-button {
+    @apply bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl;
+    transition: all 0.2s ease;
+  }
+
+  .glass-button:hover {
+    @apply bg-white/15 border-white/30;
+  }
+
+  .glass-button:active {
+    @apply scale-95;
+  }
+
+  .accent-button {
+    @apply bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl;
+    transition: all 0.2s ease;
+  }
+
+  .accent-button:hover {
+    @apply from-orange-600 to-orange-700 shadow-lg shadow-orange-500/30;
+  }
+
+  .accent-button:active {
+    @apply scale-95;
+  }
+
+  .input-field {
+    @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40;
+    transition: all 0.2s ease;
+  }
+
+  .input-field:focus {
+    @apply outline-none border-orange-500/50 ring-2 ring-orange-500/20;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
