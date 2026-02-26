@@ -28,6 +28,7 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
   const { profile } = useAuth();
 
   const categories = [
@@ -106,7 +107,7 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
   };
 
   return (
-    <div className="min-h-screen pb-32 p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="min-h-screen pb-48 sm:pb-64 p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Choose a Template</h1>
@@ -194,11 +195,21 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
                   className="glass-card overflow-hidden relative"
                 >
                   {template.thumbnail_url && (
-                    <div className="w-full h-48 bg-black/50 overflow-hidden">
+                    <div className="w-full h-48 overflow-hidden relative group">
+                      {!imageLoaded[template.id] && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-purple-500/20 to-blue-500/20 animate-pulse">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                       <img
                         src={template.thumbnail_url}
                         alt={template.name}
-                        className="w-full h-full object-cover opacity-60"
+                        className={`w-full h-full object-cover opacity-70 group-hover:opacity-90 group-hover:scale-105 transition-all duration-300 ${
+                          imageLoaded[template.id] ? 'opacity-70' : 'opacity-0'
+                        }`}
+                        loading="lazy"
+                        onLoad={() => setImageLoaded(prev => ({ ...prev, [template.id]: true }))}
                       />
                     </div>
                   )}
