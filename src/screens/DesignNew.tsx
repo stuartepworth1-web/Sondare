@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Zap } from 'lucide-react';
+import { Search, X, Zap, Crown, Eye, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { TemplatePreviewModal } from '../components/TemplatePreviewModal';
 
 interface Template {
   id: string;
@@ -10,6 +11,9 @@ interface Template {
   category: string;
   template_data: any;
   is_featured: boolean;
+  is_premium?: boolean;
+  tier_required?: string;
+  thumbnail_url?: string;
 }
 
 interface DesignNewProps {
@@ -23,6 +27,7 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const { profile } = useAuth();
 
   const categories = [
@@ -73,8 +78,35 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
     return colors[category] || 'bg-gray-500/20 text-gray-500';
   };
 
+  const canAccessTemplate = (template: Template) => {
+    if (!template.is_premium) return true;
+    if (!profile) return false;
+
+    const tier = profile.subscription_tier || 'free';
+    if (tier === 'entrepreneur') return true;
+    if (tier === 'pro' && template.tier_required !== 'entrepreneur') return true;
+
+    return false;
+  };
+
+  const handleTemplateClick = (template: Template) => {
+    if (!canAccessTemplate(template)) {
+      onShowUpgrade?.();
+      return;
+    }
+    onSelectTemplate(template);
+  };
+
+  const handlePreview = (e: React.MouseEvent, template: Template) => {
+    e.stopPropagation();
+    console.log('Preview template:', template);
+    console.log('Template data:', template.template_data);
+    console.log('Screens:', template.template_data?.screens);
+    setPreviewTemplate(template);
+  };
+
   return (
-    <div className="min-h-screen pb-24 p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="min-h-screen pb-32 p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Choose a Template</h1>
@@ -154,42 +186,87 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
           </h3>
 
           <div className="grid grid-cols-1 gap-3">
-            {filteredTemplates.map((template) => (
-              <button
-                key={template.id}
-                onClick={() => onSelectTemplate(template)}
-                className="glass-card p-4 sm:p-5 hover:bg-white/10 transition-colors active:scale-[0.98] text-left"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-base sm:text-lg">{template.name}</h4>
-                        {template.is_featured && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-500">
-                            Featured
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-white/60 text-xs sm:text-sm line-clamp-2">
-                        {template.description}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${getCategoryColor(template.category)}`}>
-                      {template.category}
-                    </span>
-                  </div>
-
-                  {template.template_data?.screens && (
-                    <div className="flex items-center gap-2 text-xs text-white/40">
-                      <span>{template.template_data.screens.length} screens</span>
-                      <span>•</span>
-                      <span>Ready to customize</span>
+            {filteredTemplates.map((template) => {
+              const hasAccess = canAccessTemplate(template);
+              return (
+                <div
+                  key={template.id}
+                  className="glass-card overflow-hidden relative"
+                >
+                  {template.thumbnail_url && (
+                    <div className="w-full h-48 bg-black/50 overflow-hidden">
+                      <img
+                        src={template.thumbnail_url}
+                        alt={template.name}
+                        className="w-full h-full object-cover opacity-60"
+                      />
                     </div>
                   )}
+
+                  <div className="p-4 sm:p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h4 className="font-semibold text-base sm:text-lg">{template.name}</h4>
+                          {template.is_featured && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-500">
+                              Featured
+                            </span>
+                          )}
+                          {template.is_premium && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-500 flex items-center gap-1">
+                              <Crown className="w-3 h-3" />
+                              Premium
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-white/60 text-xs sm:text-sm line-clamp-2">
+                          {template.description}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${getCategoryColor(template.category)}`}>
+                        {template.category}
+                      </span>
+                    </div>
+
+                    {template.template_data?.screens && (
+                      <div className="flex items-center gap-2 text-xs text-white/40">
+                        <span>{template.template_data.screens.length} screens</span>
+                        <span>•</span>
+                        <span>Ready to customize</span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => handlePreview(e, template)}
+                        className="flex-1 glass-button py-2.5 flex items-center justify-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span className="text-sm">Preview</span>
+                      </button>
+                      <button
+                        onClick={() => handleTemplateClick(template)}
+                        className={`flex-1 py-2.5 flex items-center justify-center gap-2 text-sm font-medium rounded-lg transition-all ${
+                          hasAccess
+                            ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                            : 'glass-button opacity-60'
+                        }`}
+                      >
+                        {hasAccess ? (
+                          <>Use Template</>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4" />
+                            Upgrade to Use
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </button>
-            ))}
+              );
+            })}
 
             {filteredTemplates.length === 0 && (
               <div className="text-center py-12">
@@ -198,6 +275,13 @@ export function DesignNew({ onSelectTemplate, onCreateBlank, onShowUpgrade }: De
             )}
           </div>
         </div>
+      )}
+
+      {previewTemplate && (
+        <TemplatePreviewModal
+          screens={previewTemplate.template_data?.screens || []}
+          onClose={() => setPreviewTemplate(null)}
+        />
       )}
     </div>
   );

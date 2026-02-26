@@ -17,33 +17,48 @@ interface Generation {
   };
 }
 
+interface AppScreen {
+  id: string;
+  name: string;
+  screen_type: string;
+  background_color: string;
+}
+
 export function ProjectPreview({ projectId, projectName, onClose }: ProjectPreviewProps) {
   const [generation, setGeneration] = useState<Generation | null>(null);
+  const [appScreens, setAppScreens] = useState<AppScreen[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'screens' | 'components' | 'code'>('screens');
 
   useEffect(() => {
-    const fetchGeneration = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
-          .from('generations')
-          .select('generated_code, generated_schema')
-          .eq('project_id', projectId)
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const [generationData, screensData] = await Promise.all([
+          supabase
+            .from('generations')
+            .select('generated_code, generated_schema')
+            .eq('project_id', projectId)
+            .eq('status', 'completed')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from('app_screens')
+            .select('id, name, screen_type, background_color')
+            .eq('project_id', projectId)
+            .order('order_index')
+        ]);
 
-        if (error) throw error;
-        if (data) setGeneration(data);
+        if (generationData.data) setGeneration(generationData.data);
+        if (screensData.data) setAppScreens(screensData.data);
       } catch (error) {
-        console.error('Error fetching generation:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchGeneration();
+    fetchData();
   }, [projectId]);
 
   if (loading) {
@@ -57,11 +72,14 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
     );
   }
 
-  if (!generation) {
+  const hasData = generation || appScreens.length > 0;
+
+  if (!hasData) {
     return (
       <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-6">
         <div className="glass-card p-6 max-w-md text-center space-y-4">
-          <p className="text-white/60">No generation data found for this project.</p>
+          <p className="text-white/60">No data found for this project yet.</p>
+          <p className="text-sm text-white/40">Start building in the Visual Editor to see your app!</p>
           <button onClick={onClose} className="accent-button px-6 py-3">
             Close
           </button>
@@ -69,6 +87,10 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
       </div>
     );
   }
+
+  const screensToShow = appScreens.length > 0 ? appScreens : generation?.generated_schema?.screens || [];
+  const componentsToShow = generation?.generated_schema?.components || [];
+  const featuresToShow = generation?.generated_schema?.features || [];
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
@@ -122,71 +144,104 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
         {activeTab === 'screens' && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold mb-4">
-              App Screens ({generation.generated_schema.screens.length})
+              App Screens ({screensToShow.length})
             </h3>
-            {generation.generated_schema.screens.map((screen, index) => (
-              <div key={index} className="glass-card p-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-orange-500/20 p-2 rounded-lg">
-                    <Smartphone className="w-5 h-5 text-orange-500" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">{screen}</h4>
-                    <p className="text-white/60 text-sm">Main app screen</p>
+            {screensToShow.map((screen, index) => {
+              const screenName = typeof screen === 'string' ? screen : screen.name;
+              const screenType = typeof screen === 'string' ? 'Main screen' : screen.screen_type;
+              const bgColor = typeof screen === 'string' ? '#1C1C1E' : screen.background_color;
+
+              return (
+                <div key={index} className="glass-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-orange-500/20 p-2 rounded-lg">
+                      <Smartphone className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">{screenName}</h4>
+                      <p className="text-white/60 text-sm">{screenType}</p>
+                    </div>
+                    <div
+                      className="w-8 h-8 rounded border border-white/20"
+                      style={{ backgroundColor: bgColor }}
+                      title="Background color"
+                    />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {activeTab === 'components' && (
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold mb-4">
-              UI Components ({generation.generated_schema.components.length})
-            </h3>
-            {generation.generated_schema.components.map((component, index) => (
-              <div key={index} className="glass-card p-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-500/20 p-2 rounded-lg">
-                    <Layers className="w-5 h-5 text-blue-500" />
+            {componentsToShow.length > 0 ? (
+              <>
+                <h3 className="text-lg font-semibold mb-4">
+                  UI Components ({componentsToShow.length})
+                </h3>
+                {componentsToShow.map((component, index) => (
+                  <div key={index} className="glass-card p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-500/20 p-2 rounded-lg">
+                        <Layers className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">{component}</h4>
+                        <p className="text-white/60 text-sm">Reusable UI element</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold">{component}</h4>
-                    <p className="text-white/60 text-sm">Reusable UI element</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div className="glass-card p-4 bg-green-500/5 border-green-500/20 mt-6">
-              <h4 className="font-semibold mb-2 text-green-500">Features Included</h4>
-              <ul className="space-y-1 text-sm text-white/80">
-                {generation.generated_schema.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="text-green-500">•</span>
-                    {feature}
-                  </li>
                 ))}
-              </ul>
-            </div>
+              </>
+            ) : (
+              <div className="glass-card p-6 text-center">
+                <p className="text-white/60">No components data available yet</p>
+              </div>
+            )}
+
+            {featuresToShow.length > 0 && (
+              <div className="glass-card p-4 bg-green-500/5 border-green-500/20 mt-6">
+                <h4 className="font-semibold mb-2 text-green-500">Features Included</h4>
+                <ul className="space-y-1 text-sm text-white/80">
+                  {featuresToShow.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-green-500">•</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'code' && (
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold mb-4">Generated Code</h3>
-            {Object.entries(generation.generated_code).map(([filename, code]) => (
-              <div key={filename} className="glass-card p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-orange-500">{filename}</h4>
-                  <Code className="w-4 h-4 text-white/40" />
+            <h3 className="text-lg font-semibold mb-4">Export Code</h3>
+            {generation?.generated_code && Object.keys(generation.generated_code).length > 0 ? (
+              Object.entries(generation.generated_code).map(([filename, code]) => (
+                <div key={filename} className="glass-card p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-orange-500">{filename}</h4>
+                    <Code className="w-4 h-4 text-white/40" />
+                  </div>
+                  <pre className="text-xs text-white/80 overflow-x-auto bg-black/30 p-3 rounded-lg">
+                    <code>{code}</code>
+                  </pre>
                 </div>
-                <pre className="text-xs text-white/80 overflow-x-auto bg-black/30 p-3 rounded-lg">
-                  <code>{code}</code>
-                </pre>
+              ))
+            ) : (
+              <div className="glass-card p-6 text-center space-y-3">
+                <Code className="w-12 h-12 text-white/20 mx-auto" />
+                <div>
+                  <p className="text-white/60 mb-2">Ready to export your app?</p>
+                  <p className="text-sm text-white/40">
+                    Click the Export button on your project to download a complete React Native project with all your screens and components!
+                  </p>
+                </div>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

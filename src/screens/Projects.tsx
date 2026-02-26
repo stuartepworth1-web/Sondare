@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FolderOpen, Plus, Loader2, Eye, Download, Trash2, Edit, Zap } from 'lucide-react';
+import { FolderOpen, Plus, Loader2, Eye, Download, Trash2, Edit, Zap, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ProjectPreview } from '../components/ProjectPreview';
+import { Auth } from '../components/Auth';
 
 interface Project {
   id: string;
@@ -26,6 +27,7 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [previewProject, setPreviewProject] = useState<Project | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
 
   const fetchProjects = async () => {
     if (!user) return;
@@ -87,16 +89,43 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
     }
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen pb-32 p-4 sm:p-6 flex flex-col items-center justify-center space-y-4">
+        <div className="glass-card p-5 sm:p-6 rounded-full">
+          <FolderOpen className="w-10 h-10 sm:w-12 sm:h-12 text-white/40" />
+        </div>
+        <div className="text-center space-y-2 max-w-md">
+          <h3 className="text-base sm:text-lg font-semibold">Sign In to View Projects</h3>
+          <p className="text-white/60 text-xs sm:text-sm">
+            Create a free account to save and manage your app projects.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAuth(true)}
+          className="accent-button px-5 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 text-sm sm:text-base"
+        >
+          <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
+          Sign Up Free
+        </button>
+
+        {showAuth && (
+          <Auth onClose={() => setShowAuth(false)} />
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen pb-24 flex items-center justify-center">
+      <div className="min-h-screen pb-32 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="min-h-screen pb-32 p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold">My Projects</h1>

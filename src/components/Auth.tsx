@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-export function Auth() {
+interface AuthProps {
+  onClose?: () => void;
+}
+
+export function Auth({ onClose }: AuthProps = {}) {
   const { signUp, signIn, resetPassword } = useAuth();
   const [isSignUp, setIsSignUp] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -45,8 +49,19 @@ export function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
+    <div className={`flex flex-col items-center justify-center p-8 ${onClose ? 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50' : 'min-h-screen'}`}>
       <div className="w-full max-w-md space-y-8">
+        {onClose && (
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="glass-button p-2"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold gradient-text">Sondare</h1>
           <p className="text-white/60">

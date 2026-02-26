@@ -15,8 +15,12 @@ import { VisualEditor } from './screens/VisualEditor';
 import { PrivacyPolicy } from './screens/PrivacyPolicy';
 import { TermsOfService } from './screens/TermsOfService';
 import { Support } from './screens/Support';
-import { supabase } from './lib/supabase';
+import { PublishingGuide } from './screens/PublishingGuide';
+import { supabase, isMissingEnvVars } from './lib/supabase';
 import { downloadProjectFiles } from './lib/exportApp';
+import { AlertTriangle } from 'lucide-react';
+
+console.log('App.tsx loaded');
 
 interface Template {
   id: string;
@@ -38,6 +42,10 @@ function AppContent() {
   const [visualEditorProject, setVisualEditorProject] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('App state:', { user: !!user, loading, profile: !!profile, isMissingEnvVars });
+  }, [user, loading, profile]);
+
+  useEffect(() => {
     const onboarded = localStorage.getItem('hasSeenOnboarding');
     const tutorialed = localStorage.getItem('hasSeenTutorial');
 
@@ -51,6 +59,29 @@ function AppContent() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  if (isMissingEnvVars) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-zinc-900 rounded-lg p-8 text-center space-y-4">
+          <AlertTriangle className="w-16 h-16 text-orange-500 mx-auto" />
+          <h1 className="text-2xl font-bold text-white">Configuration Required</h1>
+          <p className="text-zinc-400">
+            This app requires environment variables to be configured. Please add the following
+            to your Netlify environment settings:
+          </p>
+          <div className="bg-black rounded p-4 text-left font-mono text-sm text-zinc-300 space-y-2">
+            <div>VITE_SUPABASE_URL</div>
+            <div>VITE_SUPABASE_ANON_KEY</div>
+            <div>VITE_REVENUECAT_IOS_KEY</div>
+          </div>
+          <p className="text-zinc-500 text-sm">
+            After adding these variables, redeploy your site for the changes to take effect.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
@@ -74,12 +105,17 @@ function AppContent() {
     return <Support />;
   }
 
+  if (currentRoute === '/publishing-guide') {
+    return <PublishingGuide />;
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="space-y-4 text-center">
           <div className="text-4xl font-bold gradient-text">Sondare</div>
           <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full mx-auto animate-pulse" />
+          <p className="text-zinc-500 text-sm mt-4">Loading app...</p>
         </div>
       </div>
     );
@@ -269,11 +305,54 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  console.log('App component rendering');
+
+  if (isMissingEnvVars) {
+    console.error('Missing environment variables!');
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="glass-card p-8 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Configuration Required</h1>
+          <p className="text-white mb-4">
+            The app is missing required environment variables.
+          </p>
+          <div className="text-left bg-black/50 p-4 rounded-lg mb-4">
+            <p className="text-sm text-zinc-400 mb-2">Required variables:</p>
+            <ul className="text-xs text-zinc-500 space-y-1 font-mono">
+              <li>VITE_SUPABASE_URL={import.meta.env.VITE_SUPABASE_URL ? '✓' : '✗ MISSING'}</li>
+              <li>VITE_SUPABASE_ANON_KEY={import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓' : '✗ MISSING'}</li>
+            </ul>
+          </div>
+          <p className="text-sm text-zinc-500">
+            Please configure these in your hosting platform's environment variables.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    return (
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    );
+  } catch (error) {
+    console.error('Error rendering App:', error);
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="glass-card p-8 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">App Error</h1>
+          <p className="text-white mb-4">
+            {error instanceof Error ? error.message : 'An unknown error occurred'}
+          </p>
+          <p className="text-sm text-zinc-500">
+            Check the browser console for more details.
+          </p>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;

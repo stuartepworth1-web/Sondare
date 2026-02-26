@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { generateReactNativeCode, generatePackageJson, generateAppJson, generateReadme } from './codeExport';
 
 interface Screen {
   id: string;
@@ -34,21 +35,37 @@ export async function exportAppCode(projectId: string): Promise<{ files: Record<
     throw new Error('No screens found in project');
   }
 
+  const screensWithComponents = await Promise.all(
+    screens.map(async (screen) => {
+      const { data: components } = await supabase
+        .from('app_components')
+        .select('*')
+        .eq('screen_id', screen.id)
+        .order('layer_order');
+      return { ...screen, components: components || [] };
+    })
+  );
+
   const files: Record<string, string> = {};
-
-  for (const screen of screens) {
-    const { data: components } = await supabase
-      .from('app_components')
-      .select('*')
-      .eq('screen_id', screen.id)
-      .order('layer_order');
-
-    files[`screens/${screen.name}.tsx`] = generateScreenCode(screen, components || []);
-  }
-
-  files['App.tsx'] = generateAppCode(screens);
+  files['App.js'] = generateReactNativeCode(screensWithComponents);
   files['package.json'] = generatePackageJson(project?.name || 'MyApp');
-  files['README.md'] = generateReadme(project?.name || 'MyApp', project?.description || '');
+  files['app.json'] = generateAppJson(project?.name || 'MyApp');
+  files['README.md'] = generateReadme(project?.name || 'MyApp');
+  files['.gitignore'] = `node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local`;
 
   return { files, readme: files['README.md'] };
 }

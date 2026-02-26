@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, AlertCircle, Eye, CheckCircle } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertCircle, Eye, CheckCircle, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ProjectPreview } from '../components/ProjectPreview';
+import { Auth } from '../components/Auth';
 
 interface Message {
   id: string;
@@ -28,7 +29,9 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your AI app builder. Describe the app you want to create, and I'll help bring it to life. What kind of app are you thinking of?",
+      content: user
+        ? "Hi! I'm your AI app builder. Describe the app you want to create, and I'll help bring it to life. What kind of app are you thinking of?"
+        : "Hi! I'm your AI app builder. Sign up for a free account to start building your app with AI. No credit card required!",
       timestamp: new Date(),
     },
   ]);
@@ -37,6 +40,7 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
   const [error, setError] = useState('');
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
@@ -131,6 +135,12 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
+
+    if (!user) {
+      setError('Sign up for a free account to start building apps with AI.');
+      setShowAuth(true);
+      return;
+    }
 
     if (totalCredits <= 0) {
       setError('No credits remaining. Please upgrade your plan to continue.');
@@ -247,7 +257,7 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col pb-24">
+    <div className="h-screen flex flex-col pb-32">
       <div className="glass-card m-3 sm:m-4 mb-0 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
@@ -275,10 +285,20 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
               </button>
             </>
           )}
-          <div className="text-xs sm:text-sm flex-shrink-0">
-            <span className="text-white/60">Credits: </span>
-            <span className="font-semibold text-orange-500">{totalCredits}</span>
-          </div>
+          {user ? (
+            <div className="text-xs sm:text-sm flex-shrink-0">
+              <span className="text-white/60">Credits: </span>
+              <span className="font-semibold text-orange-500">{totalCredits}</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="accent-button px-3 py-1.5 text-xs sm:text-sm flex items-center gap-1.5"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign Up Free</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -342,7 +362,7 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
           />
           <button
             onClick={handleSend}
-            disabled={loading || !input.trim() || totalCredits <= 0}
+            disabled={loading || !input.trim() || (user && totalCredits <= 0)}
             className="accent-button px-4 sm:px-6 flex items-center justify-center disabled:opacity-50 flex-shrink-0"
           >
             {loading ? (
@@ -363,6 +383,10 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
           projectName={currentProject.name}
           onClose={() => setShowPreview(false)}
         />
+      )}
+
+      {showAuth && (
+        <Auth onClose={() => setShowAuth(false)} />
       )}
     </div>
   );

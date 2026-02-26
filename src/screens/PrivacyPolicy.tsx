@@ -1,7 +1,16 @@
+import { ChevronLeft } from 'lucide-react';
+
 export function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-6 pb-24">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 text-orange-600 hover:text-orange-700 mb-6 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="font-medium">Back</span>
+        </button>
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Privacy Policy for Sondare</h1>
         <p className="text-sm text-slate-600 mb-8">Last Updated: October 16, 2025</p>
 

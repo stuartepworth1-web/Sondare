@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Plus,
   Eye,
@@ -12,12 +12,23 @@ import {
   Zap,
   Sparkles,
   HelpCircle,
+  Palette,
+  Move,
+  Maximize2,
+  Undo2,
+  Redo2,
+  Copy,
+  Clipboard,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ComponentLibrary, COMPONENT_LIBRARY, ComponentDefinition } from '../components/ComponentLibrary';
 import { PropertyEditor } from '../components/PropertyEditor';
 import { PresetLibrary } from '../components/PresetLibrary';
+import { PreviewModal } from '../components/PreviewModal';
+import { AlignmentTools } from '../components/AlignmentTools';
+import { ScreenTemplatesNew as ScreenTemplates } from '../components/ScreenTemplatesNew';
+import { useHistory } from '../hooks/useHistory';
 
 interface VisualEditorProps {
   projectId: string;
@@ -63,6 +74,18 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   const [isDragging, setIsDragging] = useState(false);
   const [dragThreshold, setDragThreshold] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
+  const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({});
+  const [showPreview, setShowPreview] = useState(false);
+  const [allComponents, setAllComponents] = useState<Component[]>([]);
+  const [editingText, setEditingText] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [clipboard, setClipboard] = useState<Component | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [mouseDownTime, setMouseDownTime] = useState(0);
+  const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
+  const history = useHistory<Component[]>([]);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadScreens();
@@ -75,10 +98,46 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   }, [currentScreen]);
 
   useEffect(() => {
+    if (components.length > 0 && history.state.length === 0) {
+      history.reset(components);
+    }
+  }, [components.length]);
+
+  useEffect(() => {
+    if (history.state !== components && history.state.length > 0) {
+      setComponents(history.state);
+    }
+  }, [history.state]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '?' && e.shiftKey) {
         e.preventDefault();
         setShowKeyboardShortcuts(!showKeyboardShortcuts);
+        return;
+      }
+
+      if (e.key === 'z' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        if (history.canUndo) history.undo();
+        return;
+      }
+
+      if ((e.key === 'z' && e.shiftKey && (e.metaKey || e.ctrlKey)) || (e.key === 'y' && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        if (history.canRedo) history.redo();
+        return;
+      }
+
+      if (e.key === 'c' && (e.metaKey || e.ctrlKey) && selectedComponent) {
+        e.preventDefault();
+        setClipboard(selectedComponent);
+        return;
+      }
+
+      if (e.key === 'v' && (e.metaKey || e.ctrlKey) && clipboard) {
+        e.preventDefault();
+        handlePaste();
         return;
       }
 
@@ -318,6 +377,46 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
     }
   };
 
+  const handleLayerUp = async (id: string) => {
+    const index = components.findIndex(c => c.id === id);
+    if (index < components.length - 1) {
+      const newComponents = [...components];
+      const temp = newComponents[index + 1];
+      newComponents[index + 1] = newComponents[index];
+      newComponents[index] = temp;
+
+      for (let i = 0; i < newComponents.length; i++) {
+        await supabase
+          .from('app_components')
+          .update({ layer_order: i })
+          .eq('id', newComponents[i].id);
+        newComponents[i].layer_order = i;
+      }
+
+      setComponents(newComponents);
+    }
+  };
+
+  const handleLayerDown = async (id: string) => {
+    const index = components.findIndex(c => c.id === id);
+    if (index > 0) {
+      const newComponents = [...components];
+      const temp = newComponents[index - 1];
+      newComponents[index - 1] = newComponents[index];
+      newComponents[index] = temp;
+
+      for (let i = 0; i < newComponents.length; i++) {
+        await supabase
+          .from('app_components')
+          .update({ layer_order: i })
+          .eq('id', newComponents[i].id);
+        newComponents[i].layer_order = i;
+      }
+
+      setComponents(newComponents);
+    }
+  };
+
   const handleAddScreen = async () => {
     try {
       const { data, error } = await supabase
@@ -348,6 +447,41 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
     setSaving(false);
   };
 
+  const handleBackgroundColorChange = async (color: string) => {
+    if (!currentScreen) return;
+
+    try {
+      const { error } = await supabase
+        .from('app_screens')
+        .update({ background_color: color })
+        .eq('id', currentScreen.id);
+
+      if (error) throw error;
+
+      setCurrentScreen({ ...currentScreen, background_color: color });
+      setScreens(screens.map(s => s.id === currentScreen.id ? { ...s, background_color: color } : s));
+    } catch (error) {
+      console.error('Error updating background color:', error);
+    }
+  };
+
+  const loadAllComponentsForPreview = async () => {
+    try {
+      const screenIds = screens.map(s => s.id);
+      const { data, error } = await supabase
+        .from('app_components')
+        .select('*')
+        .in('screen_id', screenIds)
+        .order('layer_order');
+
+      if (error) throw error;
+      setAllComponents(data || []);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Error loading components for preview:', error);
+    }
+  };
+
   const handleApplyPreset = async (preset: any) => {
     if (!currentScreen) return;
 
@@ -372,9 +506,142 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
     }
   };
 
+  const handlePaste = async () => {
+    if (!clipboard || !currentScreen) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('app_components')
+        .insert({
+          screen_id: currentScreen.id,
+          component_type: clipboard.component_type,
+          props: clipboard.props,
+          styles: clipboard.styles,
+          position_x: clipboard.position_x + 20,
+          position_y: clipboard.position_y + 20,
+          width: clipboard.width,
+          height: clipboard.height,
+          layer_order: components.length,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const newComponents = [...components, data];
+        setComponents(newComponents);
+        history.set(newComponents);
+        setSelectedComponent(data);
+        setShowPropertyEditor(true);
+      }
+    } catch (error) {
+      console.error('Error pasting component:', error);
+    }
+  };
+
+  const handleAlign = async (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'horizontal' | 'vertical') => {
+    if (!selectedComponent) return;
+
+    let updates: any = {};
+
+    switch (type) {
+      case 'left':
+        updates.position_x = 0;
+        break;
+      case 'center':
+        updates.position_x = Math.round(187.5 - selectedComponent.width / 2);
+        break;
+      case 'right':
+        updates.position_x = 375 - selectedComponent.width;
+        break;
+      case 'top':
+        updates.position_y = 0;
+        break;
+      case 'middle':
+        updates.position_y = Math.round(333.5 - selectedComponent.height / 2);
+        break;
+      case 'bottom':
+        updates.position_y = 667 - selectedComponent.height;
+        break;
+      case 'horizontal':
+        updates.position_x = Math.round(187.5 - selectedComponent.width / 2);
+        break;
+      case 'vertical':
+        updates.position_y = Math.round(333.5 - selectedComponent.height / 2);
+        break;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const newComponents = components.map(c =>
+        c.id === selectedComponent.id ? { ...c, ...updates } : c
+      );
+      setComponents(newComponents);
+      history.set(newComponents);
+      await handleUpdateComponent(selectedComponent.id, updates, {});
+    }
+  };
+
+  const handleApplyTemplate = async (template: any) => {
+    if (!currentScreen) return;
+
+    try {
+      await supabase.from('app_components').delete().eq('screen_id', currentScreen.id);
+
+      for (let i = 0; i < template.components.length; i++) {
+        const comp = template.components[i];
+        await supabase.from('app_components').insert({
+          screen_id: currentScreen.id,
+          component_type: comp.type,
+          props: comp.props,
+          styles: {},
+          position_x: comp.position_x,
+          position_y: comp.position_y,
+          width: comp.width,
+          height: comp.height,
+          layer_order: i,
+        });
+      }
+
+      await loadComponents(currentScreen.id);
+    } catch (error) {
+      console.error('Error applying template:', error);
+    }
+  };
+
+  const handleDoubleClick = (component: Component) => {
+    if (component.component_type === 'text' || component.component_type === 'button') {
+      const textKey = component.component_type === 'button' ? 'text' : 'text';
+      setEditingText(component.id);
+      setEditingValue(component.props[textKey] || '');
+      setTimeout(() => textInputRef.current?.focus(), 0);
+    }
+  };
+
+  const handleTextEdit = async (componentId: string, newText: string) => {
+    const component = components.find(c => c.id === componentId);
+    if (!component) return;
+
+    const textKey = component.component_type === 'button' ? 'text' : 'text';
+    const newProps = { ...component.props, [textKey]: newText };
+
+    const newComponents = components.map(c =>
+      c.id === componentId ? { ...c, props: newProps } : c
+    );
+    setComponents(newComponents);
+    history.set(newComponents);
+
+    await handleUpdateComponent(componentId, newProps, {});
+    setEditingText(null);
+  };
+
   const handleMouseDown = (e: React.MouseEvent, component: Component) => {
     e.stopPropagation();
     e.preventDefault();
+
+    setMouseDownTime(Date.now());
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
+    setSelectedComponent(component);
+    setShowPropertyEditor(true);
 
     setDragging({
       id: component.id,
@@ -385,8 +652,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
     });
     setIsDragging(false);
     setDragThreshold(false);
-    setSelectedComponent(component);
-    setShowPropertyEditor(true);
   };
 
   const handleResizeStart = (e: React.MouseEvent, component: Component, handle: string) => {
@@ -401,6 +666,21 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
       startHeight: component.height,
       handle,
     });
+  };
+
+  const getBackgroundStyle = (props: any) => {
+    const style: any = {};
+
+    if (props.backgroundImage) {
+      style.backgroundImage = `url(${props.backgroundImage})`;
+      style.backgroundSize = 'cover';
+      style.backgroundPosition = 'center';
+      style.backgroundRepeat = 'no-repeat';
+    } else if (props.backgroundColor) {
+      style.backgroundColor = props.backgroundColor;
+    }
+
+    return style;
   };
 
   useEffect(() => {
@@ -425,6 +705,31 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           if (component) {
             newX = Math.max(0, Math.min(375 - component.width, newX));
             newY = Math.max(0, Math.min(667 - component.height, newY));
+
+            const snapThreshold = 5;
+            const guides: { x?: number; y?: number } = {};
+
+            const centerX = 187.5;
+            if (Math.abs(newX + component.width / 2 - centerX) < snapThreshold) {
+              newX = centerX - component.width / 2;
+              guides.x = centerX;
+            } else if (Math.abs(newX) < snapThreshold) {
+              newX = 0;
+              guides.x = 0;
+            } else if (Math.abs(newX + component.width - 375) < snapThreshold) {
+              newX = 375 - component.width;
+              guides.x = 375;
+            }
+
+            if (Math.abs(newY) < snapThreshold) {
+              newY = 0;
+              guides.y = 0;
+            } else if (Math.abs(newY + component.height - 667) < snapThreshold) {
+              newY = 667 - component.height;
+              guides.y = 667;
+            }
+
+            setSnapGuides(guides);
           }
 
           setComponents((prev) =>
@@ -480,29 +785,41 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
       }
     };
 
-    const handleMouseUp = async () => {
+    const handleMouseUp = async (e: MouseEvent) => {
+      const timeDiff = Date.now() - mouseDownTime;
+      const distDiff = Math.sqrt(
+        Math.pow(e.clientX - mouseDownPos.x, 2) + Math.pow(e.clientY - mouseDownPos.y, 2)
+      );
+
       if (dragging) {
         if (dragThreshold) {
           const component = components.find((c) => c.id === dragging.id);
           if (component) {
+            history.set(components);
             await handleUpdateComponent(component.id, {
               position_x: component.position_x,
               position_y: component.position_y,
-            });
+            }, {});
+          }
+        } else if (timeDiff < 300 && distDiff < 5) {
+          if (selectedComponent) {
+            handleDoubleClick(selectedComponent);
           }
         }
         setDragging(null);
         setIsDragging(false);
         setDragThreshold(false);
+        setSnapGuides({});
       } else if (resizing) {
         const component = components.find((c) => c.id === resizing.id);
         if (component) {
+          history.set(components);
           await handleUpdateComponent(component.id, {
             width: component.width,
             height: component.height,
             position_x: component.position_x,
             position_y: component.position_y,
-          });
+          }, {});
         }
         setResizing(null);
       }
@@ -643,8 +960,15 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         return (
           <div
             key={component.id}
-            style={baseStyle}
+            style={{
+              ...baseStyle,
+              ...getBackgroundStyle(component.props),
+              padding: `${component.props.paddingVertical || 0}px ${component.props.paddingHorizontal || 0}px`,
+              borderRadius: component.props.borderRadius ? `${component.props.borderRadius}px` : undefined,
+            }}
             onMouseDown={(e) => handleMouseDown(e, component)}
+            onDoubleClick={() => handleDoubleClick(component)}
+            title="Double-click to edit text"
           >
             {resizeHandles}
             <p
@@ -654,6 +978,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
                 fontWeight: component.props.fontWeight,
                 textAlign: component.props.textAlign,
                 margin: 0,
+                pointerEvents: 'none',
               }}
             >
               {component.props.text}
@@ -667,23 +992,28 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={baseStyle}
             onMouseDown={(e) => handleMouseDown(e, component)}
+            onDoubleClick={() => handleDoubleClick(component)}
+            title="Double-click to edit text"
           >
             {resizeHandles}
             <button
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: component.props.backgroundColor,
-                color: component.props.textColor,
-                fontSize: `${component.props.fontSize}px`,
-                borderRadius: `${component.props.borderRadius}px`,
+                ...getBackgroundStyle(component.props),
+                color: component.props.textColor || '#FFFFFF',
+                fontSize: `${component.props.fontSize || 16}px`,
+                borderRadius: `${component.props.borderRadius || 8}px`,
                 border: 'none',
-                cursor: 'pointer',
+                cursor: 'move',
                 fontWeight: '600',
                 pointerEvents: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {component.props.text}
+              {component.props.text || 'Button'}
             </button>
           </div>
         );
@@ -693,7 +1023,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           <div
             key={component.id}
             style={baseStyle}
-            onClick={handleClick}
             onMouseDown={(e) => handleMouseDown(e, component)}
           >
             {resizeHandles}
@@ -703,7 +1032,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: component.props.backgroundColor,
+                ...getBackgroundStyle(component.props),
                 color: component.props.textColor,
                 border: `1px solid ${component.props.borderColor}`,
                 borderRadius: `${component.props.borderRadius}px`,
@@ -722,21 +1051,58 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           <div
             key={component.id}
             style={baseStyle}
-            onClick={handleClick}
             onMouseDown={(e) => handleMouseDown(e, component)}
           >
             {resizeHandles}
-            <img
-              src={component.props.source}
-              alt="Component"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                borderRadius: `${component.props.borderRadius}px`,
-                pointerEvents: 'none',
-              }}
-            />
+            {component.props.source ? (
+              <img
+                src={component.props.source}
+                alt="Component"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: `${component.props.borderRadius}px`,
+                  pointerEvents: 'none',
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.style.backgroundColor = '#1C1C1E';
+                    parent.style.display = 'flex';
+                    parent.style.alignItems = 'center';
+                    parent.style.justifyContent = 'center';
+                    if (!parent.querySelector('.image-error')) {
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'image-error';
+                      errorDiv.textContent = 'Image failed to load';
+                      errorDiv.style.color = '#666';
+                      errorDiv.style.fontSize = '12px';
+                      errorDiv.style.pointerEvents = 'none';
+                      parent.appendChild(errorDiv);
+                    }
+                  }
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#1C1C1E',
+                  borderRadius: `${component.props.borderRadius || 0}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#666',
+                  fontSize: '12px',
+                  pointerEvents: 'none',
+                }}
+              >
+                No image selected
+              </div>
+            )}
           </div>
         );
 
@@ -746,12 +1112,11 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={{
               ...baseStyle,
-              backgroundColor: component.props.backgroundColor,
+              ...getBackgroundStyle(component.props),
               borderRadius: `${component.props.borderRadius}px`,
               border: `${component.props.borderWidth}px solid ${component.props.borderColor}`,
               padding: `${component.props.padding}px`,
             }}
-            onClick={handleClick}
             onMouseDown={(e) => handleMouseDown(e, component)}
           >
             {resizeHandles}
@@ -769,7 +1134,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
               gap: `${component.props.spacing}px`,
               overflow: 'hidden',
             }}
-            onClick={handleClick}
             onMouseDown={(e) => handleMouseDown(e, component)}
           >
             {resizeHandles}
@@ -798,7 +1162,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={{
               ...baseStyle,
-              backgroundColor: component.props.backgroundColor,
+              ...getBackgroundStyle(component.props),
               borderRadius: `${component.props.borderRadius}px`,
               padding: `${component.props.padding}px`,
             }}
@@ -820,7 +1184,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             key={component.id}
             style={{
               ...baseStyle,
-              backgroundColor: component.props.backgroundColor,
+              ...getBackgroundStyle(component.props),
               display: 'flex',
               alignItems: 'center',
               padding: '0 16px',
@@ -869,6 +1233,54 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowBackgroundPicker(!showBackgroundPicker)}
+            className="glass-button p-2 relative"
+            title="Change Background"
+          >
+            <Palette className="w-4 h-4" />
+            {currentScreen && (
+              <div
+                className="absolute bottom-0 right-0 w-3 h-3 rounded-full border border-white/30"
+                style={{ backgroundColor: currentScreen.background_color }}
+              />
+            )}
+          </button>
+          <div className="h-6 w-px bg-white/10" />
+          <button
+            onClick={() => history.undo()}
+            disabled={!history.canUndo}
+            className="glass-button p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Undo (Cmd+Z)"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => history.redo()}
+            disabled={!history.canRedo}
+            className="glass-button p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Redo (Cmd+Shift+Z)"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+          <div className="h-6 w-px bg-white/10" />
+          <button
+            onClick={() => selectedComponent && setClipboard(selectedComponent)}
+            disabled={!selectedComponent}
+            className="glass-button p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Copy (Cmd+C)"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handlePaste}
+            disabled={!clipboard}
+            className="glass-button p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Paste (Cmd+V)"
+          >
+            <Clipboard className="w-4 h-4" />
+          </button>
+          <div className="h-6 w-px bg-white/10" />
+          <button
             onClick={() => setShowKeyboardShortcuts(true)}
             className="glass-button p-2"
             title="Keyboard Shortcuts (?)"
@@ -890,7 +1302,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           >
             <Save className={`w-4 h-4 ${saving ? 'animate-pulse' : ''}`} />
           </button>
-          <button onClick={onPreview} className="glass-button p-2">
+          <button onClick={loadAllComponentsForPreview} className="glass-button p-2">
             <Eye className="w-4 h-4" />
           </button>
           <button onClick={onExport} className="accent-button p-2">
@@ -901,13 +1313,13 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
       <div className="flex-1 flex overflow-hidden">
         {showComponentLibrary && (
-          <div className="hidden md:block md:w-64 glass-card border-r border-white/10">
+          <div className="w-64 glass-card border-r border-white/10 flex-shrink-0 overflow-y-auto">
             <ComponentLibrary onSelectComponent={handleAddComponent} />
           </div>
         )}
 
-        <div className="flex-1 flex flex-col items-center overflow-auto bg-[#0A0A0A] p-4 md:p-8">
-          <div className="mb-4 flex gap-2 items-center flex-wrap justify-center">
+        <div className="flex-1 flex flex-col items-center overflow-auto bg-[#0A0A0A] p-4 pb-32">
+          <div className="mb-4 flex gap-2 items-center flex-wrap justify-center max-w-4xl">
             <button
               onClick={() => setShowComponentLibrary(!showComponentLibrary)}
               className="glass-button p-2"
@@ -921,6 +1333,14 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             >
               <Sparkles className="w-4 h-4 mr-1.5 inline-block" />
               <span className="text-sm">Presets</span>
+            </button>
+
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="accent-button px-3 py-2"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5 inline-block" />
+              <span className="text-sm">Templates</span>
             </button>
 
             {screens.map((screen) => (
@@ -947,7 +1367,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
           {currentScreen && (
             <div
-              className="relative border-4 md:border-8 border-gray-800 rounded-[40px] shadow-2xl"
+              className="relative border-4 md:border-8 border-gray-800 rounded-[40px] shadow-2xl mb-8"
               style={{
                 width: '100%',
                 maxWidth: '375px',
@@ -962,6 +1382,19 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
             >
               <div className="w-full h-full relative" data-canvas>
                 {components.map(renderComponent)}
+
+                {snapGuides.x !== undefined && (
+                  <div
+                    className="absolute top-0 bottom-0 w-px bg-orange-500 pointer-events-none z-[999]"
+                    style={{ left: `${snapGuides.x}px` }}
+                  />
+                )}
+                {snapGuides.y !== undefined && (
+                  <div
+                    className="absolute left-0 right-0 h-px bg-orange-500 pointer-events-none z-[999]"
+                    style={{ top: `${snapGuides.y}px` }}
+                  />
+                )}
 
                 {components.length === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -979,75 +1412,26 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         </div>
 
         {showPropertyEditor && selectedComponent && (
-          <div className="hidden md:block md:w-80 glass-card border-l border-white/10">
+          <div className="w-80 glass-card border-l border-white/10 overflow-y-auto flex-shrink-0">
+            <div className="p-4 space-y-4">
+              <AlignmentTools
+                onAlign={handleAlign}
+                disabled={false}
+              />
+            </div>
             <PropertyEditor
               component={selectedComponent}
               onUpdate={handleUpdateComponent}
               onDelete={handleDeleteComponent}
               onDuplicate={handleDuplicateComponent}
+              onLayerUp={handleLayerUp}
+              onLayerDown={handleLayerDown}
             />
           </div>
         )}
       </div>
 
-      {showComponentLibrary && (
-        <div className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end">
-          <div className="w-full glass-card rounded-t-3xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="font-semibold">Components</h3>
-              <button
-                onClick={() => setShowComponentLibrary(false)}
-                className="glass-button p-2"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto">
-              <ComponentLibrary onSelectComponent={(comp) => {
-                handleAddComponent(comp);
-                setShowComponentLibrary(false);
-              }} />
-            </div>
-          </div>
-        </div>
-      )}
 
-      {showPropertyEditor && selectedComponent && (
-        <div className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end">
-          <div className="w-full glass-card rounded-t-3xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="font-semibold">Properties</h3>
-              <button
-                onClick={() => {
-                  setShowPropertyEditor(false);
-                  setSelectedComponent(null);
-                }}
-                className="glass-button p-2"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto">
-              <PropertyEditor
-                component={selectedComponent}
-                onUpdate={handleUpdateComponent}
-                onDelete={(id) => {
-                  handleDeleteComponent(id);
-                  setShowPropertyEditor(false);
-                }}
-                onDuplicate={(id) => {
-                  handleDuplicateComponent(id);
-                  setShowPropertyEditor(false);
-                }}
-                onClose={() => {
-                  setShowPropertyEditor(false);
-                  setSelectedComponent(null);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {showPresetLibrary && (
         <PresetLibrary
@@ -1055,6 +1439,59 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           onClose={() => setShowPresetLibrary(false)}
           onShowUpgrade={onShowUpgrade || (() => {})}
         />
+      )}
+
+      {showBackgroundPicker && currentScreen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card max-w-md w-full">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Screen Background</h2>
+              <button onClick={() => setShowBackgroundPicker(false)} className="glass-button p-2">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm text-white/80 mb-2 block">Background Color</label>
+                <div className="flex gap-3">
+                  <input
+                    type="color"
+                    value={currentScreen.background_color}
+                    onChange={(e) => handleBackgroundColorChange(e.target.value)}
+                    className="w-16 h-16 rounded-lg border-2 border-white/20 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={currentScreen.background_color}
+                      onChange={(e) => handleBackgroundColorChange(e.target.value)}
+                      className="input-field w-full mb-2"
+                      placeholder="#000000"
+                    />
+                    <p className="text-xs text-white/60">Enter a hex color code or use the picker</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-white/80 mb-2 block">Quick Colors</label>
+                <div className="grid grid-cols-6 gap-2">
+                  {['#000000', '#FFFFFF', '#1F2937', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => handleBackgroundColorChange(color)}
+                      className="w-full aspect-square rounded-lg border-2 transition-all hover:scale-110"
+                      style={{
+                        backgroundColor: color,
+                        borderColor: currentScreen.background_color === color ? '#FF9500' : 'rgba(255,255,255,0.2)',
+                      }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {showKeyboardShortcuts && (
@@ -1102,6 +1539,63 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
                   <p>• Click canvas to deselect</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPreview && currentScreen && (
+        <PreviewModal
+          screens={screens}
+          components={allComponents}
+          currentScreenId={currentScreen.id}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+
+      {showTemplates && (
+        <ScreenTemplates
+          onApplyTemplate={handleApplyTemplate}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
+
+      {editingText && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setEditingText(null)}
+          />
+          <div className="relative glass-card p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">Edit Text</h3>
+            <input
+              ref={textInputRef}
+              type="text"
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleTextEdit(editingText, editingValue);
+                } else if (e.key === 'Escape') {
+                  setEditingText(null);
+                }
+              }}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-orange-500"
+              placeholder="Enter text..."
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => handleTextEdit(editingText, editingValue)}
+                className="accent-button flex-1 py-2"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingText(null)}
+                className="glass-button flex-1 py-2"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
