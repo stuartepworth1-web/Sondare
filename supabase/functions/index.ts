@@ -70,7 +70,7 @@ Guidelines:
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-sonnet-20250219',
       max_tokens: 2048,
       messages,
       system: systemPrompt,
@@ -259,7 +259,7 @@ Deno.serve(async (req: Request) => {
             components: appStructure.components || [],
             features: appStructure.features || [],
           },
-          ai_model: 'claude-3-5-sonnet-20241022',
+          ai_model: 'claude-3-5-sonnet-20250219',
           processing_time: 0,
           status: 'completed',
         });
