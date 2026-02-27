@@ -1,4 +1,4 @@
-import { X, Smartphone, Code, Layers } from 'lucide-react';
+import { X, Smartphone, Code, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -22,18 +22,33 @@ interface AppScreen {
   name: string;
   screen_type: string;
   background_color: string;
+  order_index: number;
+}
+
+interface AppComponent {
+  id: string;
+  screen_id: string;
+  component_type: string;
+  props: Record<string, any>;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  layer_order: number;
 }
 
 export function ProjectPreview({ projectId, projectName, onClose }: ProjectPreviewProps) {
   const [generation, setGeneration] = useState<Generation | null>(null);
   const [appScreens, setAppScreens] = useState<AppScreen[]>([]);
+  const [appComponents, setAppComponents] = useState<AppComponent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'screens' | 'components' | 'code'>('screens');
+  const [activeTab, setActiveTab] = useState<'visual' | 'screens' | 'components' | 'code'>('visual');
+  const [currentScreenIndex, setCurrentScreenIndex] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [generationData, screensData] = await Promise.all([
+        const [generationData, screensData, componentsData] = await Promise.all([
           supabase
             .from('generations')
             .select('generated_code, generated_schema')
@@ -44,13 +59,19 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
             .maybeSingle(),
           supabase
             .from('app_screens')
-            .select('id, name, screen_type, background_color')
+            .select('id, name, screen_type, background_color, order_index')
             .eq('project_id', projectId)
-            .order('order_index')
+            .order('order_index'),
+          supabase
+            .from('app_components')
+            .select('*')
+            .eq('project_id', projectId)
+            .order('layer_order')
         ]);
 
         if (generationData.data) setGeneration(generationData.data);
         if (screensData.data) setAppScreens(screensData.data);
+        if (componentsData.data) setAppComponents(componentsData.data);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -92,6 +113,159 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
   const componentsToShow = generation?.generated_schema?.components || [];
   const featuresToShow = generation?.generated_schema?.features || [];
 
+  const currentScreen = appScreens[currentScreenIndex];
+  const currentScreenComponents = currentScreen
+    ? appComponents.filter(c => c.screen_id === currentScreen.id)
+    : [];
+
+  const canGoBack = currentScreenIndex > 0;
+  const canGoForward = currentScreenIndex < appScreens.length - 1;
+
+  const goToPrevious = () => {
+    if (canGoBack) setCurrentScreenIndex(currentScreenIndex - 1);
+  };
+
+  const goToNext = () => {
+    if (canGoForward) setCurrentScreenIndex(currentScreenIndex + 1);
+  };
+
+  const renderComponent = (component: AppComponent) => {
+    const baseStyle = {
+      position: 'absolute' as const,
+      left: `${component.position_x}px`,
+      top: `${component.position_y}px`,
+      width: `${component.width}px`,
+      height: `${component.height}px`,
+    };
+
+    switch (component.component_type) {
+      case 'text':
+        return (
+          <div key={component.id} style={baseStyle}>
+            <p
+              style={{
+                fontSize: `${component.props.fontSize}px`,
+                color: component.props.color,
+                fontWeight: component.props.fontWeight,
+                textAlign: component.props.textAlign,
+                margin: 0,
+              }}
+            >
+              {component.props.text}
+            </p>
+          </div>
+        );
+
+      case 'button':
+        return (
+          <div key={component.id} style={baseStyle}>
+            <button
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: component.props.backgroundColor || '#FF9500',
+                color: component.props.textColor || '#FFFFFF',
+                fontSize: `${component.props.fontSize || 16}px`,
+                borderRadius: `${component.props.borderRadius || 8}px`,
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {component.props.text || 'Button'}
+            </button>
+          </div>
+        );
+
+      case 'input':
+        return (
+          <div key={component.id} style={baseStyle}>
+            <input
+              type="text"
+              placeholder={component.props.placeholder}
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: component.props.backgroundColor,
+                color: component.props.textColor,
+                border: `1px solid ${component.props.borderColor}`,
+                borderRadius: `${component.props.borderRadius}px`,
+                padding: '0 12px',
+                fontSize: '14px',
+                outline: 'none',
+              }}
+            />
+          </div>
+        );
+
+      case 'image':
+        return (
+          <div key={component.id} style={baseStyle}>
+            <img
+              src={component.props.source}
+              alt="Component"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                borderRadius: `${component.props.borderRadius}px`,
+              }}
+            />
+          </div>
+        );
+
+      case 'container':
+        return (
+          <div
+            key={component.id}
+            style={{
+              ...baseStyle,
+              backgroundColor: component.props.backgroundColor,
+              borderRadius: `${component.props.borderRadius}px`,
+              border: `${component.props.borderWidth}px solid ${component.props.borderColor}`,
+              padding: `${component.props.padding}px`,
+            }}
+          />
+        );
+
+      case 'header':
+        return (
+          <div
+            key={component.id}
+            style={{
+              ...baseStyle,
+              backgroundColor: component.props.backgroundColor,
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 16px',
+            }}
+          >
+            {component.props.showBackButton && (
+              <button style={{ marginRight: '12px', background: 'none', border: 'none', color: '#FF9500', fontSize: '20px', cursor: 'pointer' }}>
+                ←
+              </button>
+            )}
+            <h3
+              style={{
+                margin: 0,
+                fontSize: `${component.props.fontSize}px`,
+                fontWeight: component.props.fontWeight,
+                color: component.props.textColor,
+              }}
+            >
+              {component.props.title}
+            </h3>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
       <div className="glass-card m-4 p-4 flex items-center justify-between border-b border-white/10">
@@ -104,7 +278,20 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
         </button>
       </div>
 
-      <div className="flex gap-2 px-4">
+      <div className="flex gap-2 px-4 overflow-x-auto">
+        {appScreens.length > 0 && (
+          <button
+            onClick={() => setActiveTab('visual')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              activeTab === 'visual'
+                ? 'bg-orange-500 text-white'
+                : 'glass-button'
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            Visual Preview
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('screens')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -113,7 +300,7 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
               : 'glass-button'
           }`}
         >
-          <Smartphone className="w-4 h-4" />
+          <Layers className="w-4 h-4" />
           Screens
         </button>
         <button
@@ -141,6 +328,66 @@ export function ProjectPreview({ projectId, projectName, onClose }: ProjectPrevi
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
+        {activeTab === 'visual' && appScreens.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goToPrevious}
+                  disabled={!canGoBack}
+                  className="glass-button p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-white text-sm font-medium">
+                  {currentScreen?.name || 'Screen'}
+                  {appScreens.length > 1 && ` (${currentScreenIndex + 1}/${appScreens.length})`}
+                </span>
+                <button
+                  onClick={goToNext}
+                  disabled={!canGoForward}
+                  className="glass-button p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <div
+                className="relative border-4 border-gray-800 rounded-[40px] shadow-2xl"
+                style={{
+                  width: '375px',
+                  height: '667px',
+                  backgroundColor: currentScreen?.background_color || '#000000',
+                  overflow: 'hidden',
+                }}
+              >
+                <div className="w-full h-full relative">
+                  {currentScreenComponents.length > 0 ? (
+                    currentScreenComponents
+                      .sort((a, b) => a.layer_order - b.layer_order)
+                      .map(renderComponent)
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center p-6">
+                        <Smartphone className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                        <p className="text-white/40 text-sm">No components yet</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-white/60 text-sm">
+                Use the arrows to navigate between screens
+              </p>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'screens' && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold mb-4">
