@@ -16,7 +16,7 @@ async function chatWithClaude(conversationHistory: Array<{role: string, content:
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
+    throw new Error('AI service is temporarily unavailable. Our team has been notified and is working on a fix. Please try again later.');
   }
 
   const systemPrompt = `You are an expert mobile app designer and React developer helping to build apps iteratively, just like Bolt.new.
@@ -70,7 +70,7 @@ Guidelines:
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20240620',
+      model: 'claude-3-5-sonnet-20250219',
       max_tokens: 2048,
       messages,
       system: systemPrompt,
@@ -79,7 +79,17 @@ Guidelines:
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Claude API error: ${error}`);
+    console.error('Claude API error:', response.status, error);
+
+    if (response.status === 401) {
+      throw new Error('AI service authentication failed. The API key may be invalid or expired. Please contact support.');
+    } else if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    } else if (response.status >= 500) {
+      throw new Error('AI service is temporarily unavailable. Please try again in a few moments.');
+    } else {
+      throw new Error(`API error (${response.status}): ${error.substring(0, 200)}`);
+    }
   }
 
   const data = await response.json();
@@ -249,7 +259,7 @@ Deno.serve(async (req: Request) => {
             components: appStructure.components || [],
             features: appStructure.features || [],
           },
-          ai_model: 'claude-3-5-sonnet-20240620',
+          ai_model: 'claude-3-5-sonnet-20250219',
           processing_time: 0,
           status: 'completed',
         });
