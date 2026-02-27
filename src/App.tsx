@@ -172,7 +172,7 @@ function AppContent() {
             project_id: projectId,
             name: screenData.name,
             screen_type: screenData.type || 'custom',
-            background_color: templateData.backgroundColor || '#000000',
+            background_color: screenData.background_color || templateData.backgroundColor || '#000000',
             order_index: i,
             is_home_screen: i === 0,
           })
@@ -186,11 +186,11 @@ function AppContent() {
               screen_id: screen.id,
               component_type: comp.type,
               props: comp.props || {},
-              styles: {},
-              position_x: 20,
-              position_y: 80 + j * 100,
-              width: 335,
-              height: 60,
+              styles: comp.styles || {},
+              position_x: comp.position_x !== undefined ? comp.position_x : 20,
+              position_y: comp.position_y !== undefined ? comp.position_y : 80 + j * 80,
+              width: comp.width || 335,
+              height: comp.height || 60,
               layer_order: j,
             });
           }
