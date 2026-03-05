@@ -1,24 +1,4 @@
-interface Component {
-  id: string;
-  component_type: string;
-  props: Record<string, any>;
-  styles: Record<string, any>;
-  position_x: number;
-  position_y: number;
-  width: number;
-  height: number;
-  layer_order: number;
-}
-
-interface Screen {
-  id: string;
-  name: string;
-  screen_type: string;
-  background_color: string;
-  order_index: number;
-  is_home_screen: boolean;
-  components?: Component[];
-}
+import { Component, Screen } from '../types';
 
 export function generateReactNativeCode(screens: Screen[]): string {
   const screenComponents = screens.map((screen) => generateScreenCode(screen)).join('\n\n');

@@ -22,13 +22,7 @@ import { AlertTriangle } from 'lucide-react';
 
 console.log('App.tsx loaded');
 
-interface Template {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  template_data: any;
-}
+import { AppTemplate } from './types';
 
 function AppContent() {
   const { user, loading, profile } = useAuth();
@@ -133,7 +127,7 @@ function AppContent() {
     return <InteractiveTutorial onComplete={handleTutorialComplete} />;
   }
 
-  const handleSelectTemplate = async (template: Template) => {
+  const handleSelectTemplate = async (template: AppTemplate) => {
     if (!user) return;
 
     try {
@@ -160,7 +154,7 @@ function AppContent() {
     }
   };
 
-  const applyTemplate = async (projectId: string, template: Template) => {
+  const applyTemplate = async (projectId: string, template: AppTemplate) => {
     const templateData = template.template_data;
 
     if (templateData.screens) {
