@@ -211,7 +211,40 @@ export function UpgradeModalIAP({ onClose, currentTier, onUpgradeSuccess }: Upgr
   };
 
   const handleStripePurchase = async (plan: PlanConfig) => {
-    throw new Error('Web subscriptions are not yet supported. Please use the mobile app to subscribe.');
+    console.log('Starting Stripe purchase for plan:', plan.name);
+
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) {
+      throw new Error('You must be logged in to purchase a subscription.');
+    }
+
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tier: plan.tier,
+        userId: user.data.user.id,
+        isYearly: false, // Default to monthly for IAP modal
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create checkout session');
+    }
+
+    const { url } = await response.json();
+
+    if (url) {
+      window.location.href = url;
+    } else {
+      throw new Error('No checkout URL returned');
+    }
   };
 
   const handleRestore = async () => {
