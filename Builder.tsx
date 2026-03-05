@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ProjectPreview } from '../components/ProjectPreview';
 import { Auth } from '../components/Auth';
+import { useToast } from '../hooks/useToast';
 
 interface Message {
   id: string;
@@ -42,6 +43,7 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { showToast, ToastComponent } = useToast();
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
 
@@ -93,6 +95,7 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
       }
     } catch (err) {
       console.error('Error loading specific project:', err);
+      showToast('Failed to load project', 'error');
     }
   };
 
@@ -138,12 +141,14 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
 
     if (!user) {
       setError('Sign up for a free account to start building apps with AI.');
+      showToast('Sign up to start building apps', 'error');
       setShowAuth(true);
       return;
     }
 
     if (totalCredits <= 0) {
       setError('No credits remaining. Please upgrade your plan to continue.');
+      showToast('No credits remaining. Please upgrade your plan.', 'error');
       onShowUpgrade();
       return;
     }
@@ -210,7 +215,9 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
 
       await refreshProfile();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -388,6 +395,8 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
       {showAuth && (
         <Auth onClose={() => setShowAuth(false)} />
       )}
+
+      <ToastComponent />
     </div>
   );
 }

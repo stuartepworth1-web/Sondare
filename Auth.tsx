@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, AlertCircle, Loader2, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 interface AuthProps {
   onClose?: () => void;
@@ -15,6 +16,7 @@ export function Auth({ onClose }: AuthProps = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const { showToast, ToastComponent } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +29,10 @@ export function Auth({ onClose }: AuthProps = {}) {
         const { error } = await resetPassword(email);
         if (error) {
           setError(error.message);
+          showToast(error.message, 'error');
         } else {
           setSuccessMessage('Password reset link sent to your email!');
+          showToast('Password reset link sent to your email!', 'success');
           setTimeout(() => {
             setIsForgotPassword(false);
             setSuccessMessage('');
@@ -41,6 +45,9 @@ export function Auth({ onClose }: AuthProps = {}) {
 
         if (error) {
           setError(error.message);
+          showToast(error.message, 'error');
+        } else {
+          showToast(isSignUp ? 'Account created successfully!' : 'Signed in successfully!', 'success');
         }
       }
     } finally {
@@ -183,6 +190,8 @@ export function Auth({ onClose }: AuthProps = {}) {
           </div>
         )}
       </div>
+
+      <ToastComponent />
     </div>
   );
 }

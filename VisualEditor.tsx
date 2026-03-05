@@ -29,6 +29,8 @@ import { PreviewModal } from '../components/PreviewModal';
 import { AlignmentTools } from '../components/AlignmentTools';
 import { ScreenTemplatesNew as ScreenTemplates } from '../components/ScreenTemplatesNew';
 import { useHistory } from '../hooks/useHistory';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 interface VisualEditorProps {
   projectId: string;
@@ -66,7 +68,8 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   const [components, setComponents] = useState<Component[]>([]);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
   const [showComponentLibrary, setShowComponentLibrary] = useState(true);
-  const [showPropertyEditor, setShowPropertyEditor] = useState(false);
+  const [showPropertyEditor, setShowPropertyEditor] = useState(true);
+  const [showLayersPanel, setShowLayersPanel] = useState(false);
   const [showPresetLibrary, setShowPresetLibrary] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState<{ id: string; startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
@@ -84,8 +87,10 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   const [showTemplates, setShowTemplates] = useState(false);
   const [mouseDownTime, setMouseDownTime] = useState(0);
   const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const history = useHistory<Component[]>([]);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const { showToast, ToastComponent } = useToast();
 
   useEffect(() => {
     loadScreens();
@@ -155,7 +160,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
       if (e.key === 'Escape') {
         setSelectedComponent(null);
-        setShowPropertyEditor(false);
       }
 
       const step = e.shiftKey ? 10 : 1;
@@ -184,7 +188,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         setComponents(prev =>
           prev.map(c => c.id === selectedComponent.id ? { ...c, ...updates } : c)
         );
-        handleUpdateComponent(selectedComponent.id, updates);
+        handleUpdateComponent(selectedComponent.id, updates, {});
       }
     };
 
@@ -210,6 +214,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
       }
     } catch (error) {
       console.error('Error loading screens:', error);
+      showToast('Failed to load screens', 'error');
     }
   };
 
@@ -280,10 +285,11 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
       if (data) {
         setComponents([...components, data]);
         setSelectedComponent(data);
-        setShowPropertyEditor(true);
+        showToast('Component added', 'success');
       }
     } catch (error) {
       console.error('Error adding component:', error);
+      showToast('Failed to add component', 'error');
     }
   };
 
@@ -331,19 +337,36 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   };
 
   const handleDeleteComponent = async (id: string) => {
+    const component = components.find(c => c.id === id);
+    if (component) {
+      setDeleteConfirm({
+        id,
+        name: component.props?.text || component.component_type
+      });
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+
     try {
       const { error } = await supabase
         .from('app_components')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteConfirm.id);
 
       if (error) throw error;
 
-      setComponents(components.filter((c) => c.id !== id));
+      const newComponents = components.filter((c) => c.id !== deleteConfirm.id);
+      setComponents(newComponents);
+      history.set(newComponents);
       setSelectedComponent(null);
-      setShowPropertyEditor(false);
+      showToast('Component deleted', 'success');
     } catch (error) {
       console.error('Error deleting component:', error);
+      showToast('Failed to delete component', 'error');
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -443,8 +466,14 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      showToast('Changes saved', 'success');
+    } catch (error) {
+      showToast('Failed to save changes', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleBackgroundColorChange = async (color: string) => {
@@ -532,7 +561,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         setComponents(newComponents);
         history.set(newComponents);
         setSelectedComponent(data);
-        setShowPropertyEditor(true);
       }
     } catch (error) {
       console.error('Error pasting component:', error);
@@ -641,7 +669,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
     setMouseDownTime(Date.now());
     setMouseDownPos({ x: e.clientX, y: e.clientY });
     setSelectedComponent(component);
-    setShowPropertyEditor(true);
 
     setDragging({
       id: component.id,
@@ -1233,6 +1260,21 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowComponentLibrary(!showComponentLibrary)}
+            className="glass-button p-2"
+            title="Toggle Component Library"
+          >
+            <Layers className={`w-4 h-4 ${showComponentLibrary ? 'text-orange-500' : ''}`} />
+          </button>
+          <button
+            onClick={() => setShowPropertyEditor(!showPropertyEditor)}
+            className="glass-button p-2"
+            title="Toggle Properties Panel"
+          >
+            <Settings className={`w-4 h-4 ${showPropertyEditor ? 'text-orange-500' : ''}`} />
+          </button>
+          <div className="h-6 w-px bg-white/10" />
+          <button
             onClick={() => setShowBackgroundPicker(!showBackgroundPicker)}
             className="glass-button p-2 relative"
             title="Change Background"
@@ -1321,13 +1363,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         <div className="flex-1 flex flex-col items-center overflow-auto bg-[#0A0A0A] p-4 pb-32">
           <div className="mb-4 flex gap-2 items-center flex-wrap justify-center max-w-4xl">
             <button
-              onClick={() => setShowComponentLibrary(!showComponentLibrary)}
-              className="glass-button p-2"
-            >
-              <Layers className="w-4 h-4" />
-            </button>
-
-            <button
               onClick={() => setShowPresetLibrary(true)}
               className="glass-button px-3 py-2"
             >
@@ -1377,7 +1412,6 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
               }}
               onClick={() => {
                 setSelectedComponent(null);
-                setShowPropertyEditor(false);
               }}
             >
               <div className="w-full h-full relative" data-canvas>
@@ -1411,22 +1445,133 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           )}
         </div>
 
-        {showPropertyEditor && selectedComponent && (
-          <div className="w-80 glass-card border-l border-white/10 overflow-y-auto flex-shrink-0">
-            <div className="p-4 space-y-4">
-              <AlignmentTools
-                onAlign={handleAlign}
-                disabled={false}
-              />
+        {showPropertyEditor && (
+          <div className="w-80 glass-card border-l border-white/10 overflow-y-auto flex-shrink-0 flex flex-col">
+            <div className="flex border-b border-white/10">
+              <button
+                onClick={() => setShowLayersPanel(false)}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  !showLayersPanel
+                    ? 'text-orange-500 border-b-2 border-orange-500'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Properties
+              </button>
+              <button
+                onClick={() => setShowLayersPanel(true)}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  showLayersPanel
+                    ? 'text-orange-500 border-b-2 border-orange-500'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Layers ({components.length})
+              </button>
             </div>
-            <PropertyEditor
-              component={selectedComponent}
-              onUpdate={handleUpdateComponent}
-              onDelete={handleDeleteComponent}
-              onDuplicate={handleDuplicateComponent}
-              onLayerUp={handleLayerUp}
-              onLayerDown={handleLayerDown}
-            />
+
+            {!showLayersPanel && selectedComponent && (
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-4 space-y-4">
+                  <AlignmentTools
+                    onAlign={handleAlign}
+                    disabled={false}
+                  />
+                </div>
+                <PropertyEditor
+                  component={selectedComponent}
+                  onUpdate={handleUpdateComponent}
+                  onDelete={handleDeleteComponent}
+                  onDuplicate={handleDuplicateComponent}
+                  onLayerUp={handleLayerUp}
+                  onLayerDown={handleLayerDown}
+                />
+              </div>
+            )}
+
+            {!showLayersPanel && !selectedComponent && (
+              <div className="flex-1 flex items-center justify-center p-6">
+                <div className="text-center space-y-3">
+                  <Layers className="w-12 h-12 text-white/20 mx-auto" />
+                  <p className="text-white/60 text-sm">
+                    Select a component to edit its properties
+                  </p>
+                  <p className="text-white/40 text-xs">
+                    Click any element on the canvas or add a new component from the library
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {showLayersPanel && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {components.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Layers className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                    <p className="text-white/60 text-sm">No components yet</p>
+                    <p className="text-white/40 text-xs mt-1">
+                      Add components from the library
+                    </p>
+                  </div>
+                ) : (
+                  components.slice().reverse().map((comp, index) => {
+                    const actualIndex = components.length - 1 - index;
+                    const isSelected = selectedComponent?.id === comp.id;
+                    return (
+                      <div
+                        key={comp.id}
+                        onClick={() => setSelectedComponent(comp)}
+                        className={`p-3 rounded-lg cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-orange-500/20 border border-orange-500'
+                            : 'glass-card hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="text-white/40 text-xs font-mono w-8">
+                              {actualIndex}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm capitalize truncate">
+                                {comp.component_type}
+                              </div>
+                              <div className="text-xs text-white/40">
+                                {comp.width}×{comp.height}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLayerUp(comp.id);
+                              }}
+                              disabled={actualIndex === components.length - 1}
+                              className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Move forward"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLayerDown(comp.id);
+                              }}
+                              disabled={actualIndex === 0}
+                              className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Move backward"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1600,6 +1745,19 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           </div>
         </div>
       )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete Component"
+          message={`Are you sure you want to delete this ${deleteConfirm.name}? This action cannot be undone.`}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      <ToastComponent />
     </div>
   );
 }

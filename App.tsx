@@ -18,11 +18,11 @@ import { Support } from './screens/Support';
 import { PublishingGuide } from './screens/PublishingGuide';
 import { supabase, isMissingEnvVars } from './lib/supabase';
 import { downloadProjectFiles } from './lib/exportApp';
+import { ProjectManager } from './lib/projectManager';
 import { AlertTriangle } from 'lucide-react';
+import { AppTemplate } from './types';
 
 console.log('App.tsx loaded');
-
-import { AppTemplate } from './types';
 
 function AppContent() {
   const { user, loading, profile } = useAuth();
@@ -130,92 +130,18 @@ function AppContent() {
   const handleSelectTemplate = async (template: AppTemplate) => {
     if (!user) return;
 
-    try {
-      const { data: project, error } = await supabase
-        .from('projects')
-        .insert({
-          user_id: user.id,
-          name: template.name,
-          description: template.description,
-          app_type: template.category,
-          status: 'draft',
-          editing_mode: 'visual',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (project) {
-        await applyTemplate(project.id, template);
-        setVisualEditorProject(project.id);
-      }
-    } catch (error) {
-      console.error('Error creating project from template:', error);
-    }
-  };
-
-  const applyTemplate = async (projectId: string, template: AppTemplate) => {
-    const templateData = template.template_data;
-
-    if (templateData.screens) {
-      for (let i = 0; i < templateData.screens.length; i++) {
-        const screenData = templateData.screens[i];
-        const { data: screen } = await supabase
-          .from('app_screens')
-          .insert({
-            project_id: projectId,
-            name: screenData.name,
-            screen_type: screenData.type || 'custom',
-            background_color: screenData.background_color || templateData.backgroundColor || '#000000',
-            order_index: i,
-            is_home_screen: i === 0,
-          })
-          .select()
-          .single();
-
-        if (screen && screenData.components) {
-          for (let j = 0; j < screenData.components.length; j++) {
-            const comp = screenData.components[j];
-            await supabase.from('app_components').insert({
-              screen_id: screen.id,
-              component_type: comp.type,
-              props: comp.props || {},
-              styles: comp.styles || {},
-              position_x: comp.position_x !== undefined ? comp.position_x : 20,
-              position_y: comp.position_y !== undefined ? comp.position_y : 80 + j * 80,
-              width: comp.width || 335,
-              height: comp.height || 60,
-              layer_order: j,
-            });
-          }
-        }
-      }
+    const projectId = await ProjectManager.createFromTemplate(user.id, template);
+    if (projectId) {
+      setVisualEditorProject(projectId);
     }
   };
 
   const handleCreateBlank = async () => {
     if (!user) return;
 
-    try {
-      const { data: project, error } = await supabase
-        .from('projects')
-        .insert({
-          user_id: user.id,
-          name: 'New App',
-          description: 'A new app created from scratch',
-          app_type: 'custom',
-          status: 'draft',
-          editing_mode: 'visual',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (project) {
-        setVisualEditorProject(project.id);
-      }
-    } catch (error) {
-      console.error('Error creating blank project:', error);
+    const projectId = await ProjectManager.createBlankProject(user.id);
+    if (projectId) {
+      setVisualEditorProject(projectId);
     }
   };
 
@@ -223,7 +149,7 @@ function AppContent() {
     setVisualEditorProject(projectId);
   };
 
-  const handleExportProject = async (projectId: string, projectName: string) => {
+  const handleExportProject = async (projectId: string, projectName: string): Promise<void> => {
     try {
       await downloadProjectFiles(projectId, projectName);
     } catch (error) {

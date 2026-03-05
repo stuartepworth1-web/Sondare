@@ -1,240 +1,188 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { type LucideIcon } from 'lucide-react';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
-};
+export type SubscriptionTier = 'free' | 'starter' | 'pro' | 'entrepreneur';
 
-interface GenerateRequest {
+export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'published';
+
+export type EditingMode = 'ai' | 'visual';
+
+export type ScreenType = 'home' | 'detail' | 'list' | 'profile' | 'settings' | 'custom' | 'login' | 'signup' | 'onboarding';
+
+export type ComponentType = 'text' | 'button' | 'input' | 'image' | 'container' | 'card' | 'header' | 'list' | 'icon' | 'divider';
+
+export interface Profile {
+  id: string;
+  email: string;
+  subscription_tier: SubscriptionTier;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string | null;
+  trial_ends_at: string | null;
+  subscription_ends_at: string | null;
+  generations_count: number;
+  last_generation_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Project {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  app_type: string;
+  status: ProjectStatus;
+  editing_mode: EditingMode;
+  current_screen_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Screen {
+  id: string;
+  project_id: string;
+  name: string;
+  screen_type: ScreenType;
+  background_color: string;
+  order_index: number;
+  is_home_screen: boolean;
+  created_at: string;
+  components?: Component[];
+}
+
+export interface Component {
+  id: string;
+  screen_id: string;
+  component_type: ComponentType;
+  props: ComponentProps;
+  styles: ComponentStyles;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  layer_order: number;
+  parent_component_id: string | null;
+  created_at: string;
+}
+
+export interface ComponentProps {
+  text?: string;
+  placeholder?: string;
+  source?: string;
+  title?: string;
+  subtitle?: string;
+  icon?: string;
+  itemCount?: number;
+  itemHeight?: number;
+  spacing?: number;
+  itemBackgroundColor?: string;
+  itemBorderRadius?: number;
+  showBackButton?: boolean;
+  fontSize?: number;
+  color?: string;
+  textColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  fontWeight?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  borderRadius?: number;
+  borderWidth?: number;
+  padding?: number;
+  [key: string]: string | number | boolean | undefined;
+}
+
+export interface ComponentStyles {
+  backgroundColor?: string;
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  shadowColor?: string;
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  opacity?: number;
+  [key: string]: string | number | undefined;
+}
+
+export interface ComponentDefinition {
+  type: ComponentType;
+  name: string;
+  icon: LucideIcon;
+  defaultProps: ComponentProps;
+  defaultStyles: ComponentStyles;
+  defaultWidth: number;
+  defaultHeight: number;
+}
+
+export interface TemplateComponent {
+  type: ComponentType;
+  props: ComponentProps;
+  styles?: ComponentStyles;
+  position_x?: number;
+  position_y?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface TemplateScreen {
+  name: string;
+  type: ScreenType;
+  background_color?: string;
+  components: TemplateComponent[];
+}
+
+export interface TemplateData {
+  name: string;
+  description: string;
+  category: string;
+  backgroundColor?: string;
+  screens: TemplateScreen[];
+}
+
+export interface AppTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  thumbnail_url: string | null;
+  is_premium: boolean;
+  required_tier: SubscriptionTier;
+  template_data: TemplateData;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  project_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  created_at: string;
+}
+
+export interface Generation {
+  id: string;
+  user_id: string;
+  project_id: string | null;
   prompt: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
 }
 
-async function generateWithClaude(prompt: string) {
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-
-  if (!apiKey) {
-    throw new Error('AI service is temporarily unavailable. Our team has been notified and is working on a fix. Please try again later.');
-  }
-
-  const systemPrompt = `You are an expert mobile app designer and React developer. Generate a complete mobile app structure based on the user's prompt.
-
-CRITICAL: You MUST return ONLY valid JSON. No markdown, no code blocks, no backticks, no explanation text. Just pure JSON.
-
-Return a JSON object with this exact structure:
-{
-  "name": "App Name (max 4 words)",
-  "appType": "social|ecommerce|productivity|fitness|finance|other",
-  "screens": ["ScreenName1", "ScreenName2"],
-  "components": ["ComponentName1", "ComponentName2"],
-  "features": ["Feature description 1", "Feature description 2"],
-  "colorScheme": {
-    "primary": "#hexcolor",
-    "secondary": "#hexcolor",
-    "background": "#hexcolor",
-    "text": "#hexcolor"
-  }
+export interface Deployment {
+  id: string;
+  project_id: string;
+  version: string;
+  status: 'pending' | 'building' | 'deployed' | 'failed';
+  deployment_url: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-Guidelines:
-- Generate 4-6 screens appropriate for the app type
-- Generate 4-8 reusable components
-- List 4-6 key features
-- Use modern, professional color schemes (avoid purple/indigo unless requested)
-- IMPORTANT: Do not include code in the response, only the structure
-- Return ONLY the JSON object, no other text`;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate a mobile app structure for: ${prompt}`,
-        },
-      ],
-      system: systemPrompt,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Claude API error:', error);
-
-    if (response.status === 401) {
-      throw new Error('AI service authentication failed. Our team has been notified. Please try again later.');
-    } else if (response.status === 429) {
-      throw new Error('Our AI service is experiencing high demand. Please try again in a few moments.');
-    } else if (response.status >= 500) {
-      throw new Error('AI service is temporarily unavailable. Please try again in a few moments.');
-    } else {
-      throw new Error('Unable to generate your app. Please try again or contact support if the issue persists.');
-    }
-  }
-
-  const data = await response.json();
-  const content = data.content[0].text;
-
-  let jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    console.error('No JSON found in Claude response:', content.substring(0, 500));
-    throw new Error('Unable to generate app structure. Please try again or rephrase your request.');
-  }
-
-  let jsonStr = jsonMatch[0];
-
-  try {
-    return JSON.parse(jsonStr);
-  } catch (parseError) {
-    console.error('JSON parse error:', parseError);
-    console.error('Attempted to parse:', jsonStr.substring(0, 500));
-    throw new Error('Unable to process the generated app. Please try again.');
-  }
+export interface HistoryState<T> {
+  past: T[];
+  present: T;
+  future: T[];
 }
-
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
-
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      throw new Error('Unauthorized');
-    }
-
-    const { prompt }: GenerateRequest = await req.json();
-
-    if (!prompt || prompt.trim().length === 0) {
-      throw new Error('Prompt is required');
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('credits_remaining, credits_purchased')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) throw profileError;
-
-    const totalCredits = (profile.credits_remaining || 0) + (profile.credits_purchased || 0);
-
-    if (totalCredits <= 0) {
-      return new Response(
-        JSON.stringify({ error: 'No credits remaining' }),
-        {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const startTime = Date.now();
-    const appStructure = await generateWithClaude(prompt);
-    const processingTime = Math.round((Date.now() - startTime) / 1000);
-
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        user_id: user.id,
-        name: appStructure.name,
-        description: prompt,
-        app_type: appStructure.appType,
-        status: 'generating',
-        color_scheme: appStructure.colorScheme,
-      })
-      .select()
-      .single();
-
-    if (projectError) throw projectError;
-
-    const { error: generationError } = await supabase
-      .from('generations')
-      .insert({
-        project_id: project.id,
-        prompt,
-        generated_code: {},
-        generated_schema: {
-          screens: appStructure.screens,
-          components: appStructure.components,
-          features: appStructure.features,
-        },
-        ai_model: 'claude-sonnet-4-20250514',
-        processing_time: processingTime,
-        status: 'completed',
-      });
-
-    if (generationError) throw generationError;
-
-    await supabase
-      .from('projects')
-      .update({ status: 'completed' })
-      .eq('id', project.id);
-
-    if (profile.credits_purchased > 0) {
-      await supabase
-        .from('profiles')
-        .update({ credits_purchased: profile.credits_purchased - 1 })
-        .eq('id', user.id);
-    } else {
-      await supabase
-        .from('profiles')
-        .update({ credits_remaining: profile.credits_remaining - 1 })
-        .eq('id', user.id);
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: `I've created your ${appStructure.appType} app! It includes ${appStructure.screens.length} screens and ${appStructure.components.length} components. Check the Projects tab to view it.`,
-        project: {
-          id: project.id,
-          name: appStructure.name,
-          appType: appStructure.appType,
-        },
-      }),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-  } catch (error) {
-    console.error('Error:', error);
-    
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-  }
-});

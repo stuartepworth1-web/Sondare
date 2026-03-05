@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Auth } from '../components/Auth';
+import { useToast } from '../hooks/useToast';
 
 interface SettingsProps {
   onShowUpgrade: () => void;
@@ -29,6 +30,7 @@ export function Settings({ onShowUpgrade }: SettingsProps) {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const { showToast, ToastComponent } = useToast();
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
 
@@ -43,7 +45,7 @@ export function Settings({ onShowUpgrade }: SettingsProps) {
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') {
-      alert('Please type DELETE to confirm');
+      showToast('Please type DELETE to confirm', 'error');
       return;
     }
 
@@ -56,10 +58,11 @@ export function Settings({ onShowUpgrade }: SettingsProps) {
 
       if (error) throw error;
 
+      showToast('Account deleted successfully', 'success');
       await signOut();
     } catch (error) {
       console.error('Error deleting account:', error);
-      alert('Failed to delete account. Please contact support.');
+      showToast('Failed to delete account. Please contact support.', 'error');
     } finally {
       setDeleting(false);
     }
@@ -333,6 +336,8 @@ export function Settings({ onShowUpgrade }: SettingsProps) {
           </div>
         </div>
       )}
+
+      <ToastComponent />
     </div>
   );
 }

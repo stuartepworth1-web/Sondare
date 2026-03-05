@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FolderOpen, Plus, Loader2, Eye, Download, Trash2, Edit, Zap, LogIn } from 'lucide-react';
+import { FolderOpen, Plus, Loader2, Eye, Download, Trash2, CreditCard as Edit, Zap, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ProjectPreview } from '../components/ProjectPreview';
 import { Auth } from '../components/Auth';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 interface Project {
   id: string;
@@ -28,6 +30,8 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
   const [refreshing, setRefreshing] = useState(false);
   const [previewProject, setPreviewProject] = useState<Project | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const { showToast, ToastComponent } = useToast();
 
   const fetchProjects = async () => {
     if (!user) return;
@@ -44,6 +48,7 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
       setProjects(data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
+      showToast('Failed to load projects', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -59,20 +64,24 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
     await fetchProjects();
   };
 
-  const handleDelete = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project?')) return;
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
 
     try {
       const { error } = await supabase
         .from('projects')
         .delete()
-        .eq('id', projectId);
+        .eq('id', deleteConfirm.id);
 
       if (error) throw error;
 
-      setProjects(projects.filter((p) => p.id !== projectId));
+      setProjects(projects.filter((p) => p.id !== deleteConfirm.id));
+      showToast('Project deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting project:', error);
+      showToast('Failed to delete project', 'error');
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -232,7 +241,7 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
                   </button>
                 )}
                 <button
-                  onClick={() => handleDelete(project.id)}
+                  onClick={() => setDeleteConfirm({ id: project.id, name: project.name })}
                   className="glass-button py-2 px-2.5 sm:px-3 text-red-500 hover:bg-red-500/10 active:scale-95"
                 >
                   <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -250,6 +259,19 @@ export function Projects({ onContinueEditing, onExport, onShowUpgrade }: Project
           onClose={() => setPreviewProject(null)}
         />
       )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete Project"
+          message={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      <ToastComponent />
     </div>
   );
 }

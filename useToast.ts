@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { ToastType } from '../components/Toast';
+import { useState, useCallback, createElement } from 'react';
+import { Toast, ToastType } from '../components/Toast';
 
 interface ToastState {
   message: string;
@@ -27,6 +27,13 @@ export function useToast() {
   const showWarning = useCallback((message: string) => showToast(message, 'warning'), [showToast]);
   const showInfo = useCallback((message: string) => showToast(message, 'info'), [showToast]);
 
+  const ToastComponent = () => createElement(Toast, {
+    message: toast.message,
+    type: toast.type,
+    isVisible: toast.isVisible,
+    onClose: hideToast,
+  });
+
   return {
     toast,
     showToast,
@@ -35,5 +42,6 @@ export function useToast() {
     showError,
     showWarning,
     showInfo,
+    ToastComponent,
   };
 }
