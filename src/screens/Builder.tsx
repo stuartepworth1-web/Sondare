@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, AlertCircle, Eye, CheckCircle, LogIn } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertCircle, Eye, CheckCircle, LogIn, ExternalLink, Wand2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ProjectPreview } from '../components/ProjectPreview';
 import { Auth } from '../components/Auth';
+import { useToast } from '../hooks/useToast';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isAction?: boolean;
+  projectId?: string;
 }
 
 interface BuilderProps {
@@ -41,9 +44,19 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showVisualEditor, setShowVisualEditor] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { showToast, ToastComponent } = useToast();
 
   const totalCredits = (profile?.credits_remaining || 0) + (profile?.credits_purchased || 0);
+
+  const stripAppStructure = (content: string): string => {
+    return content.replace(/<app_structure>[\s\S]*?<\/app_structure>/g, '').trim();
+  };
+
+  const hasAppStructure = (content: string): boolean => {
+    return /<app_structure>/.test(content);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -82,17 +95,25 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
           .order('created_at', { ascending: true });
 
         if (conversationMessages && conversationMessages.length > 0) {
-          const loadedMessages: Message[] = conversationMessages.map((msg, idx) => ({
-            id: `${idx + 2}`,
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            timestamp: new Date(msg.created_at),
-          }));
+          const loadedMessages: Message[] = conversationMessages.map((msg, idx) => {
+            const isAction = hasAppStructure(msg.content);
+            const cleanContent = stripAppStructure(msg.content);
+
+            return {
+              id: `${idx + 2}`,
+              role: msg.role as 'user' | 'assistant',
+              content: cleanContent || msg.content,
+              timestamp: new Date(msg.created_at),
+              isAction,
+              projectId: project?.id,
+            };
+          });
           setMessages([messages[0], ...loadedMessages]);
         }
       }
     } catch (err) {
       console.error('Error loading specific project:', err);
+      showToast('Failed to load project', 'error');
     }
   };
 
@@ -119,12 +140,19 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
           .order('created_at', { ascending: true });
 
         if (conversationMessages && conversationMessages.length > 0) {
-          const loadedMessages: Message[] = conversationMessages.map((msg, idx) => ({
-            id: `${idx + 2}`,
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            timestamp: new Date(msg.created_at),
-          }));
+          const loadedMessages: Message[] = conversationMessages.map((msg, idx) => {
+            const isAction = hasAppStructure(msg.content);
+            const cleanContent = stripAppStructure(msg.content);
+
+            return {
+              id: `${idx + 2}`,
+              role: msg.role as 'user' | 'assistant',
+              content: cleanContent || msg.content,
+              timestamp: new Date(msg.created_at),
+              isAction,
+              projectId: project?.id,
+            };
+          });
           setMessages([messages[0], ...loadedMessages]);
         }
       }
@@ -138,12 +166,14 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
 
     if (!user) {
       setError('Sign up for a free account to start building apps with AI.');
+      showToast('Sign up to start building apps', 'error');
       setShowAuth(true);
       return;
     }
 
     if (totalCredits <= 0) {
       setError('No credits remaining. Please upgrade your plan to continue.');
+      showToast('No credits remaining. Please upgrade your plan.', 'error');
       onShowUpgrade();
       return;
     }
@@ -187,11 +217,16 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
 
       const data = await response.json();
 
+      const isAction = hasAppStructure(data.message);
+      const cleanContent = stripAppStructure(data.message);
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message,
+        content: cleanContent || data.message,
         timestamp: new Date(),
+        isAction,
+        projectId: data.projectId,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -208,9 +243,27 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
         }
       }
 
+      if (data.projectId) {
+        const { data: project } = await supabase
+          .from('projects')
+          .select('id, name, status')
+          .eq('id', data.projectId)
+          .maybeSingle();
+
+        if (project) {
+          setCurrentProject(project);
+        }
+      }
+
+      if (isAction) {
+        showToast('App screens created! Open the Visual Editor to customize.', 'success');
+      }
+
       await refreshProfile();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -315,7 +368,22 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
                   : 'glass-card'
               }`}
             >
+              {message.isAction && (
+                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/10">
+                  <Wand2 className="w-4 h-4 text-orange-400" />
+                  <span className="text-xs text-orange-400 font-medium">App Created</span>
+                </div>
+              )}
               <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
+              {message.isAction && message.projectId && (
+                <button
+                  onClick={() => setShowPreview(true)}
+                  className="mt-3 w-full bg-orange-500 hover:bg-orange-600 transition-colors rounded-lg px-4 py-2 text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open in Visual Editor
+                </button>
+              )}
               <p
                 className={`text-xs mt-2 ${
                   message.role === 'user' ? 'text-white/60' : 'text-white/40'
@@ -388,6 +456,8 @@ export function Builder({ onShowUpgrade, initialProjectId }: BuilderProps) {
       {showAuth && (
         <Auth onClose={() => setShowAuth(false)} />
       )}
+
+      <ToastComponent />
     </div>
   );
 }
