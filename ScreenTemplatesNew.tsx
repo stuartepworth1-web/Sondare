@@ -38,7 +38,7 @@ const getCategoryIcon = (category: string) => {
 };
 
 interface ScreenTemplatesProps {
-  onApplyTemplate: (components: any[]) => void;
+  onApplyTemplate: (template: Template) => void;
   onClose: () => void;
 }
 
@@ -167,10 +167,8 @@ export function ScreenTemplatesNew({ onApplyTemplate, onClose }: ScreenTemplates
             <button
               key={template.id}
               onClick={() => {
-                if (template.screens.length > 0 && template.screens[0].components) {
-                  onApplyTemplate(template.screens[0].components);
-                  onClose();
-                }
+                onApplyTemplate(template);
+                onClose();
               }}
               className="glass-card p-4 text-left hover:bg-white/10 transition-all group"
             >
