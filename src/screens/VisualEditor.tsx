@@ -6,6 +6,8 @@ import {
   Download,
   Smartphone,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   Settings,
   Layers,
   X,
@@ -29,6 +31,8 @@ import { PreviewModal } from '../components/PreviewModal';
 import { AlignmentTools } from '../components/AlignmentTools';
 import { ScreenTemplatesNew as ScreenTemplates } from '../components/ScreenTemplatesNew';
 import { useHistory } from '../hooks/useHistory';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 interface VisualEditorProps {
   projectId: string;
@@ -85,8 +89,10 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   const [showTemplates, setShowTemplates] = useState(false);
   const [mouseDownTime, setMouseDownTime] = useState(0);
   const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const history = useHistory<Component[]>([]);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const { showToast, ToastComponent } = useToast();
 
   useEffect(() => {
     loadScreens();
@@ -184,7 +190,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
         setComponents(prev =>
           prev.map(c => c.id === selectedComponent.id ? { ...c, ...updates } : c)
         );
-        handleUpdateComponent(selectedComponent.id, updates);
+        handleUpdateComponent(selectedComponent.id, updates, {});
       }
     };
 
@@ -210,6 +216,7 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
       }
     } catch (error) {
       console.error('Error loading screens:', error);
+      showToast('Failed to load screens', 'error');
     }
   };
 
@@ -280,9 +287,11 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
       if (data) {
         setComponents([...components, data]);
         setSelectedComponent(data);
+        showToast('Component added', 'success');
       }
     } catch (error) {
       console.error('Error adding component:', error);
+      showToast('Failed to add component', 'error');
     }
   };
 
@@ -330,18 +339,36 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
   };
 
   const handleDeleteComponent = async (id: string) => {
+    const component = components.find(c => c.id === id);
+    if (component) {
+      setDeleteConfirm({
+        id,
+        name: component.props?.text || component.component_type
+      });
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+
     try {
       const { error } = await supabase
         .from('app_components')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteConfirm.id);
 
       if (error) throw error;
 
-      setComponents(components.filter((c) => c.id !== id));
+      const newComponents = components.filter((c) => c.id !== deleteConfirm.id);
+      setComponents(newComponents);
+      history.set(newComponents);
       setSelectedComponent(null);
+      showToast('Component deleted', 'success');
     } catch (error) {
       console.error('Error deleting component:', error);
+      showToast('Failed to delete component', 'error');
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -441,8 +468,14 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      showToast('Changes saved', 'success');
+    } catch (error) {
+      showToast('Failed to save changes', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleBackgroundColorChange = async (color: string) => {
@@ -1714,6 +1747,19 @@ export function VisualEditor({ projectId, onBack, onPreview, onExport, onShowUpg
           </div>
         </div>
       )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete Component"
+          message={`Are you sure you want to delete this ${deleteConfirm.name}? This action cannot be undone.`}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      <ToastComponent />
     </div>
   );
 }
